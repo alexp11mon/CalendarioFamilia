@@ -353,3 +353,195 @@ describe("series and synced calendars (RF-13, RF-28)", () => {
     expect(insertError).toBeNull();
   });
 });
+
+// Spec 014, T2: comments follow their event (plan D10, D6; RF-18, RF-19,
+// RF-26 to RF-28).
+const SECRET = process.env.CRON_SECRET ?? "";
+
+async function connection(ownerId: string, canWrite = false) {
+  const { data, error } = await admin
+    .from("calendar_connections")
+    .insert({
+      owner_id: ownerId,
+      provider: "google",
+      account_subject: `sub-${randomUUID()}`,
+      account_email: "owner@gmail.test",
+      can_write: canWrite,
+    })
+    .select("id")
+    .single();
+  if (error) throw error;
+  return data.id;
+}
+
+const WEEKLY = {
+  starts_at: "2026-11-03T17:00:00Z",
+  ends_at: "2026-11-03T18:00:00Z",
+  recurrence: "FREQ=WEEKLY;INTERVAL=1;BYDAY=TU",
+  recurrence_tz: "Europe/Madrid",
+};
+
+function exceptionOf(series: string, start: string) {
+  return {
+    starts_at: start,
+    ends_at: new Date(Date.parse(start) + 3_600_000).toISOString(),
+    series_id: series,
+    original_start: start,
+  };
+}
+
+describe("deleting the event deletes its comments (RF-18, RF-19)", () => {
+  it("with the event, the calendar and the series", async () => {
+    const event = await createEvent(calendar);
+    const onEvent = await seedComment(event, viewer.id);
+    await admin.from("events").delete().eq("id", event);
+    expect(await rowExists(onEvent)).toBe(false);
+
+    const other = await createCalendar(owner.id, "Viaje");
+    const onCalendar = await seedComment(await createEvent(other), owner.id);
+    await admin.from("calendars").delete().eq("id", other);
+    expect(await rowExists(onCalendar)).toBe(false);
+
+    const series = await createEvent(calendar, WEEKLY);
+    const exception = await createEvent(
+      calendar,
+      exceptionOf(series, "2026-11-10T17:00:00Z"),
+    );
+    const onException = await seedComment(exception, viewer.id);
+    await admin.from("events").delete().eq("id", series);
+    expect(await rowExists(onException)).toBe(false);
+  });
+
+  it("when the sync removes a synced event", async () => {
+    const synced = await createCalendar(owner.id, "Google");
+    await admin.from("synced_calendars").insert({
+      calendar_id: synced,
+      connection_id: await connection(owner.id),
+      provider: "google",
+      external_id: `cal-${randomUUID()}`,
+    });
+    const event = await createEvent(synced, {
+      external_id: `ev-${randomUUID()}`,
+    });
+    const id = await seedComment(event, owner.id);
+
+    const { error } = await anonClient().rpc("sync_apply_events", {
+      p_secret: SECRET,
+      p_calendar_id: synced,
+      p_events: [],
+      p_read_at: new Date(Date.now() + 3_600_000).toISOString(),
+    });
+    expect(error).toBeNull();
+    expect(await rowExists(id)).toBe(false);
+  });
+});
+
+describe("moving, merging, copying and uploading keep them (RF-26, RF-27)", () => {
+  it("moving the event keeps them with the new calendar's privacy", async () => {
+    const work = await createCalendar(owner.id, "Trabajo");
+    const event = await createEvent(calendar);
+    const id = await seedComment(event, viewer.id);
+    const { error } = await owner.client
+      .from("events")
+      .update({ calendar_id: work })
+      .eq("id", event);
+    expect(error).toBeNull();
+    expect(await visibleTo(owner, id)).toBe(true);
+    expect(await visibleTo(viewer, id)).toBe(false);
+  });
+
+  it("merge_calendars keeps them", async () => {
+    const target = await createCalendar(owner.id, "Clases");
+    const source = await createCalendar(owner.id, "Exámenes");
+    const id = await seedComment(await createEvent(source), owner.id);
+    const { error } = await owner.client.rpc("merge_calendars", {
+      p_source_ids: [target, source],
+      p_target_id: target,
+    });
+    expect(error).toBeNull();
+    expect(await visibleTo(owner, id)).toBe(true);
+  });
+
+  it("copy_calendar_for_owner copies them with their authors and dates", async () => {
+    const cleo = await createTestUser({ display_name: "Cleo" });
+    extraUsers.push(cleo.id);
+    const source = await createCalendar(owner.id, "Familia");
+    const event = await createEvent(source);
+    const id = await seedComment(event, editor.id);
+    await admin.from("event_comments").update({ body: "Editado" }).eq("id", id);
+    const series = await createEvent(source, WEEKLY);
+    const exception = await createEvent(
+      source,
+      exceptionOf(series, "2026-11-10T17:00:00Z"),
+    );
+    await seedComment(exception, viewer.id);
+
+    const { data: copy, error } = await admin.rpc("copy_calendar_for_owner", {
+      p_calendar_id: source,
+      p_user_id: cleo.id,
+    });
+    expect(error).toBeNull();
+
+    const { data: original } = await admin
+      .from("event_comments")
+      .select("author_id, body, created_at, edited_at")
+      .eq("id", id)
+      .single();
+    const { data: copied } = await admin
+      .from("event_comments")
+      .select(
+        "author_id, body, created_at, edited_at, events!inner(calendar_id, series_id)",
+      )
+      .eq("events.calendar_id", copy!)
+      .order("created_at");
+    expect(copied).toHaveLength(2);
+    expect(copied![0]).toMatchObject(original!);
+    expect(copied![1].events.series_id).not.toBeNull();
+  });
+
+  it("uploading to Google keeps the comments of the exceptions", async () => {
+    const connectionId = await connection(owner.id, true);
+    const upload = await createCalendar(owner.id, "Subir");
+    const series = await createEvent(upload, WEEKLY);
+    const exception = await createEvent(
+      upload,
+      exceptionOf(series, "2026-11-10T17:00:00Z"),
+    );
+    const id = await seedComment(exception, owner.id);
+
+    const { error } = await owner.client.rpc("sync_attach_uploaded", {
+      p_secret: SECRET,
+      p_calendar_id: upload,
+      p_connection_id: connectionId,
+      p_external_id: `cal-${randomUUID()}`,
+      p_mapping: [{ event_id: exception, external_id: "g-1" }],
+    } as never);
+    expect(error).toBeNull();
+    expect(await rowExists(id)).toBe(true);
+  });
+});
+
+describe("series_loss counts the comments (RF-28, plan D6)", () => {
+  it("of the exceptions that would be lost", async () => {
+    const series = await createEvent(calendar, WEEKLY);
+    const first = await createEvent(
+      calendar,
+      exceptionOf(series, "2026-11-10T17:00:00Z"),
+    );
+    const second = await createEvent(
+      calendar,
+      exceptionOf(series, "2026-11-17T17:00:00Z"),
+    );
+    await seedComment(first, viewer.id);
+    await seedComment(first, owner.id);
+    await seedComment(second, editor.id);
+
+    const all = await owner.client.rpc("series_loss", { p_series_id: series });
+    expect(all.data).toEqual([{ exceptions: 2, images: 0, comments: 3 }]);
+    const from = await owner.client.rpc("series_loss", {
+      p_series_id: series,
+      p_from: "2026-11-17T17:00:00Z",
+    });
+    expect(from.data).toEqual([{ exceptions: 1, images: 0, comments: 1 }]);
+  });
+});

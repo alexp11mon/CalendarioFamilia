@@ -1112,6 +1112,7 @@ export type Database = {
       series_loss: {
         Args: { p_from?: string; p_only?: string; p_series_id: string }
         Returns: {
+          comments: number
           exceptions: number
           images: number
         }[]

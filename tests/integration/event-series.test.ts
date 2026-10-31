@@ -716,12 +716,12 @@ describe("series functions (T6)", () => {
           ...args,
         })
       ).data;
-    expect(await loss({})).toEqual([{ exceptions: 2, images: 3 }]);
+    expect(await loss({})).toEqual([{ exceptions: 2, images: 3, comments: 0 }]);
     expect(await loss({ p_from: tuesday(2) })).toEqual([
-      { exceptions: 1, images: 2 },
+      { exceptions: 1, images: 2, comments: 0 },
     ]);
     expect(await loss({ p_only: tuesday(1) })).toEqual([
-      { exceptions: 1, images: 1 },
+      { exceptions: 1, images: 1, comments: 0 },
     ]);
     await admin.from("event_images").delete().in("id", images);
     await deleteQueuedImages(images);

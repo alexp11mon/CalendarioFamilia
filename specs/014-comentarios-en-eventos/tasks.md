@@ -30,7 +30,7 @@
   Hecho cuando: `npm run test:db -- event-comments schema` en verde y `src/types/database.ts` con la tabla nueva. Cubre: RF-7, RF-9, RF-10, RF-13, RF-14, RF-15, RF-16, RF-17, RF-22, RF-23, RF-24, RF-28 | Módulo: comments-schema
   Evidencia (2026-10-31): rojo antes de la migración (17 tests). Migración `20261031140000_event_comments.sql` aplicada en dev y tipos regenerados. `test:db -- event-comments` 17 tests y `schema` 37 tests en verde. typecheck, format y build correctos, lint con los 2 avisos previos, `npm test` 1738 tests.
 
-- [ ] T2 Conservar o borrar los comentarios con su evento y contarlos en las pérdidas de una serie
+- [x] T2 Conservar o borrar los comentarios con su evento y contarlos en las pérdidas de una serie
   Pasos:
   - Primero, casos nuevos en `event-comments.test.ts` en rojo:
     - borrar el evento, el calendario o la serie borra sus comentarios;
@@ -42,6 +42,7 @@
   - Después, la migración `comments_copy_loss` (`copy_calendar_for_owner` y `series_loss`).
 
   Hecho cuando: `npm run test:db -- event-comments event-series` en verde. Cubre: RF-18, RF-19, RF-26, RF-27, RF-28 | Módulo: comments-copy, comments-schema
+  Evidencia (2026-10-31): rojo en la copia y en `series_loss` (2 de 24 tests). Migración `20261031150000_comments_copy_loss.sql` aplicada en dev y tipos regenerados; `event-series.test.ts` actualizado con la columna `comments`. `test:db -- event-comments event-series event-images` y `orphan` en verde. typecheck, format y build correctos, lint con los 2 avisos previos, `npm test` 1738 tests.
 
 - [ ] T3 Escribir la lógica pura de los comentarios
   Pasos:

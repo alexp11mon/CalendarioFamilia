@@ -56,7 +56,7 @@
   Hecho cuando: `npm test -- comments-core` en verde. Cubre: RF-2, RF-9, RF-10, RF-11, RF-12 | Módulo: comments-core
   Evidencia (2026-10-31): rojo sin los módulos. `npm test -- comments-core` 16 tests en verde. typecheck, format y build correctos, lint con los 2 avisos previos, `npm test` 190 archivos y 1754 tests.
 
-- [ ] T4 Leer los comentarios de un evento por páginas
+- [x] T4 Leer los comentarios de un evento por páginas
   Pasos:
   - Primero, `tests/integration/comment-queries.test.ts` en rojo, con `listComments`:
     - orden cronológico, los 50 más recientes y `hasOlder`; `before` trae los anteriores; `since` trae todo desde ese comentario e incluye lo editado y sin lo borrado;
@@ -66,6 +66,7 @@
   - Después, `src/lib/comments/queries.ts`.
 
   Hecho cuando: `npm run test:db -- comment-queries` en verde. Cubre: RF-1, RF-2, RF-3, RF-4, RF-6, RF-16, RF-17, RF-21, RF-24, RF-28 | Módulo: comments-queries
+  Evidencia (2026-10-31): rojo sin `queries.ts`. `test:db -- comment-queries` 6 tests en verde. typecheck, format y build correctos, lint con los 2 avisos previos, `npm test` 1754 tests.
 
 - [ ] T5 Crear las acciones de cargar, comentar, editar y borrar
   Pasos:

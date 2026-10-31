@@ -114,7 +114,7 @@
   Hecho cuando: `npm test -- event-comments event-detail` en verde. Cubre: RF-1, RF-6, RF-7, RF-8, RF-13 | Módulo: comments-ui
   Evidencia (2026-10-31): rojo sin la sección. `npm test -- event-comments event-panel event-detail` en verde (8 de la sección y 2 nuevos en `event-panel.test.tsx`: ventana y página, también para un Lector). La sección va en `EventPanel`, que usan la ventana y la página completa, también con eventos traídos. typecheck, format y build correctos, lint con los 2 avisos previos, `npm test` 1798 tests.
 
-- [ ] T9 Actualizar los comentarios abiertos cada 20 segundos
+- [x] T9 Actualizar los comentarios abiertos cada 20 segundos
   Pasos:
   - Primero, casos en `event-comments.test.tsx` en rojo, con temporizadores simulados:
     - con la pestaña visible pide `since` cada 20 s y añade, cambia o quita lo que llega; oculta no pide nada y al volver pide al momento;
@@ -124,6 +124,7 @@
   - Después, el sondeo en `event-comments.tsx`.
 
   Hecho cuando: `npm test -- event-comments` en verde. Cubre: RF-20, RF-21 | Módulo: comments-ui
+  Evidencia (2026-10-31): rojo con 4 casos nuevos de sondeo. `npm test -- event-comments` 13 tests en verde: cada 20 s con la pestaña visible, nada oculta y al momento al volver, anuncio en `aria-live` sin mover el foco, edición cerrada con "Este comentario ya no existe" y sin sondeo al desmontar. typecheck, format y build correctos, lint con los 2 avisos previos, `npm test` 1803 tests (`agenda-view` falló una vez con la máquina cargada y pasa al repetir).
 
 - [ ] T10 Marcar en las vistas los eventos con comentarios y avisar de los que se perderían en una serie
   Pasos:

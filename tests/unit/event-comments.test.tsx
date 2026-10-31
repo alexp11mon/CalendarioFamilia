@@ -1,6 +1,6 @@
 import { act, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { EventComments } from "@/components/comments/event-comments";
 import { COMMENT_MESSAGES } from "@/lib/comments/error-messages";
 import type { CommentPage, CommentView } from "@/lib/comments/queries";
@@ -203,5 +203,122 @@ describe("EventComments", () => {
     await user.click(screen.getByRole("button", { name: "Comentar" }));
     expect(h.replace).toHaveBeenCalledWith("/dashboard/calendar");
     expect(h.show).toHaveBeenCalledWith(COMMENT_MESSAGES.gone);
+  });
+});
+
+// Spec 014, T9: polling while the detail is open (RF-20, RF-21, plan D2, D3).
+describe("EventComments polling", () => {
+  let visibility: DocumentVisibilityState = "visible";
+
+  beforeEach(() => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    visibility = "visible";
+    vi.spyOn(document, "visibilityState", "get").mockImplementation(
+      () => visibility,
+    );
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+  });
+
+  async function tick(ms: number) {
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(ms);
+    });
+  }
+
+  function setVisibility(state: DocumentVisibilityState) {
+    visibility = state;
+    act(() => {
+      document.dispatchEvent(new Event("visibilitychange"));
+    });
+  }
+
+  it("asks since the oldest comment every 20 s and takes the changes", async () => {
+    const first = comment(1);
+    h.loadComments
+      .mockResolvedValueOnce(page([first, comment(2)]))
+      .mockResolvedValueOnce(
+        page([
+          { ...first, body: "Comentario 1 cambiado", edited: true },
+          comment(3, { author: "Olga", authorId: "u2" }),
+        ]),
+      );
+    render(<EventComments eventId={EVENT} timeZone="Europe/Madrid" />);
+    await screen.findByText("Comentario 2");
+
+    await tick(19_000);
+    expect(h.loadComments).toHaveBeenCalledTimes(1);
+    await tick(1_000);
+    expect(h.loadComments).toHaveBeenLastCalledWith(EVENT, {
+      since: { createdAt: first.createdAt, id: "c1" },
+    });
+    expect(screen.getByText("Comentario 1 cambiado")).toBeInTheDocument();
+    expect(screen.queryByText("Comentario 2")).toBeNull();
+    expect(screen.getByText("Comentario 3")).toBeInTheDocument();
+  });
+
+  it("announces new comments of others without moving the focus", async () => {
+    h.loadComments
+      .mockResolvedValueOnce(page([comment(1)]))
+      .mockResolvedValueOnce(
+        page([
+          comment(1),
+          comment(2, { author: "Olga", authorId: "u2" }),
+          comment(3, { author: "Yo", canEdit: true }),
+        ]),
+      );
+    render(<EventComments eventId={EVENT} timeZone="Europe/Madrid" />);
+    const field = await screen.findByLabelText("Escribe un comentario");
+    field.focus();
+    await tick(20_000);
+    const live = screen.getByTestId("comments-live");
+    expect(live).toHaveAttribute("aria-live", "polite");
+    expect(live).toHaveTextContent("Nuevo comentario de Olga");
+    expect(live).not.toHaveTextContent("Yo");
+    expect(field).toHaveFocus();
+  });
+
+  it("asks nothing while the tab is hidden and asks at once on return", async () => {
+    h.loadComments.mockResolvedValue(page([comment(1)]));
+    render(<EventComments eventId={EVENT} timeZone="Europe/Madrid" />);
+    await screen.findByText("Comentario 1");
+    setVisibility("hidden");
+    await tick(60_000);
+    expect(h.loadComments).toHaveBeenCalledTimes(1);
+    setVisibility("visible");
+    await tick(0);
+    expect(h.loadComments).toHaveBeenCalledTimes(2);
+  });
+
+  it("closes an edit whose comment disappeared", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    const mine = comment(1, { canEdit: true });
+    h.loadComments
+      .mockResolvedValueOnce(page([mine, comment(2)]))
+      .mockResolvedValueOnce(page([comment(2)]));
+    render(<EventComments eventId={EVENT} timeZone="Europe/Madrid" />);
+    await user.click(
+      await screen.findByRole("button", {
+        name: "Editar el comentario de Vic",
+      }),
+    );
+    expect(screen.getByLabelText("Editar comentario")).toBeInTheDocument();
+    await tick(20_000);
+    expect(screen.queryByLabelText("Editar comentario")).toBeNull();
+    expect(screen.getByText(COMMENT_MESSAGES.commentGone)).toBeInTheDocument();
+  });
+
+  it("stops polling once unmounted", async () => {
+    h.loadComments.mockResolvedValue(page([comment(1)]));
+    const { unmount } = render(
+      <EventComments eventId={EVENT} timeZone="Europe/Madrid" />,
+    );
+    await screen.findByText("Comentario 1");
+    unmount();
+    await tick(60_000);
+    expect(h.loadComments).toHaveBeenCalledTimes(1);
   });
 });

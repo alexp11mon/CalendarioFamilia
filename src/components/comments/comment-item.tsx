@@ -25,6 +25,7 @@ export function CommentItem({
   now,
   onEdit,
   onDelete,
+  onEditingChange,
 }: {
   comment: CommentView;
   tint: string;
@@ -32,8 +33,14 @@ export function CommentItem({
   now: number;
   onEdit: (id: string, body: string) => Promise<Outcome>;
   onDelete: (id: string) => Promise<Outcome>;
+  /** The section closes an edit whose comment disappears (RF-21). */
+  onEditingChange?: (editing: boolean) => void;
 }) {
-  const [editing, setEditing] = useState(false);
+  const [editing, setEditingState] = useState(false);
+  const setEditing = (value: boolean) => {
+    setEditingState(value);
+    onEditingChange?.(value);
+  };
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<{ field?: string; form?: string }>({});
 

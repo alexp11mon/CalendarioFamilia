@@ -519,6 +519,51 @@ export type Database = {
           },
         ]
       }
+      event_comments: {
+        Row: {
+          author_id: string | null
+          body: string
+          client_id: string
+          created_at: string
+          edited_at: string | null
+          event_id: string
+          id: string
+        }
+        Insert: {
+          author_id?: string | null
+          body: string
+          client_id: string
+          created_at?: string
+          edited_at?: string | null
+          event_id: string
+          id?: string
+        }
+        Update: {
+          author_id?: string | null
+          body?: string
+          client_id?: string
+          created_at?: string
+          edited_at?: string | null
+          event_id?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_comments_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_comments_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       event_images: {
         Row: {
           bytes: number

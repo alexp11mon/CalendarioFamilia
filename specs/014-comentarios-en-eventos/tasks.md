@@ -14,7 +14,7 @@
 
 ## Tareas
 
-- [ ] T1 Crear la tabla de comentarios con sus permisos
+- [x] T1 Crear la tabla de comentarios con sus permisos
   Pasos:
   - Primero, `tests/integration/event-comments.test.ts` en rojo. Comprueba:
     - matriz por rol: propietario, Editor y Lector leen y comentan; un ajeno y `anon` no ven nada ni insertan; nadie inserta con `author_id` de otro;
@@ -28,6 +28,7 @@
   - Después, la migración `event_comments` según "Modelo de datos" del plan (tabla, índices, RLS, `grant update (body)` y el trigger `event_comments_rules`).
 
   Hecho cuando: `npm run test:db -- event-comments schema` en verde y `src/types/database.ts` con la tabla nueva. Cubre: RF-7, RF-9, RF-10, RF-13, RF-14, RF-15, RF-16, RF-17, RF-22, RF-23, RF-24, RF-28 | Módulo: comments-schema
+  Evidencia (2026-10-31): rojo antes de la migración (17 tests). Migración `20261031140000_event_comments.sql` aplicada en dev y tipos regenerados. `test:db -- event-comments` 17 tests y `schema` 37 tests en verde. typecheck, format y build correctos, lint con los 2 avisos previos, `npm test` 1738 tests.
 
 - [ ] T2 Conservar o borrar los comentarios con su evento y contarlos en las pérdidas de una serie
   Pasos:

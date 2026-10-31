@@ -7,7 +7,8 @@ export const COMMENT_MESSAGES = {
   empty: "Escribe un comentario.",
   tooLong: `El comentario no puede pasar de ${formatCount(MAX_COMMENT_LENGTH)} caracteres.`,
   length: `El comentario debe tener entre 1 y ${formatCount(MAX_COMMENT_LENGTH)} caracteres.`,
-  gone: "Este evento ya no existe.",
+  // RLS hides a deleted event and one of a calendar the user left alike.
+  gone: "Este evento ya no existe o ya no tienes acceso.",
   commentGone: "Este comentario ya no existe.",
   noAccess: "Ya no tienes acceso a este calendario.",
   forbidden: CALENDAR_MESSAGES.forbidden,

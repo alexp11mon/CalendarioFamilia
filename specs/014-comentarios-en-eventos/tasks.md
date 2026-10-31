@@ -146,6 +146,43 @@
   - Actualizar `AGENTS.md`.
 
   Hecho cuando: tabla de evidencias completa, verificación con la salida reportada y aprobación del usuario para cerrar. Cubre: todos | Módulo: validation
+  Evidencia (2026-10-31): tabla de evidencias RF-1 a RF-28 en este archivo; `npm run test:db` 39 archivos y 435 tests, `npm test` 194 archivos y 1812 tests, typecheck, format y build correctos; prueba manual con dos usuarios y 19 capturas. Falta la aprobación del usuario para cerrar la spec.
+
+## Evidencias RF por RF (T11, 2026-10-31)
+
+Verificación final: `npm run typecheck`, `lint` (0 errores, los 2 avisos previos), `format:check`, `npm test` (194 archivos, 1812 tests) y `npm run build` correctos; `npm run test:db` entero con 39 archivos y 435 tests en verde (7 archivos repetidos con `--no-file-parallelism` tras el límite de peticiones de Auth). Prueba manual en `next start -p 3100` con dos usuarios, propietaria a 1440 px y Lector a 390 px: comentar desde la página completa, enlace en otra pestaña y HTML como texto, ver el comentario del otro en la ventana sin recargar (5 s), anuncio "Nuevo comentario de …", borrar lo ajeno como propietaria, editar como Lector y verlo "(editado)" en la otra sesión, botones solo en lo propio, comentar una repetición (la siguiente sin comentarios), marcas "3" y "1" en la agenda, duplicar sin comentarios, aviso "Se perderán 1 cambio y 1 comentario." y expulsar al Lector (vuelve al calendario y sus comentarios quedan como "un antiguo miembro"). Tras la prueba, el aviso de evento perdido pasó a "Este evento ya no existe o ya no tienes acceso." y el número se separó del icono. 19 capturas a 390, 768 y 1440 px (claro con acento rojo y oscuro con amarillo) del detalle con comentarios, la semana y la agenda, revisadas y no versionadas. Usuarios de prueba borrados con "Borrar cuenta".
+
+| RF | Test o prueba |
+|----|---------------|
+| RF-1 | `event-comments.test.tsx` (lista en orden, esqueleto), `event-panel.test.tsx` (ventana y página completa), `comment-queries.test.ts` (orden cronológico); a mano en ventana y página |
+| RF-2 | `comments-core.test.ts` (`relativeTime`, `fullDateTime`), `comment-item.test.tsx` (avatar, nombre, `<time>` con la fecha completa), `comment-queries.test.ts` |
+| RF-3 | `comment-queries.test.ts` ("un antiguo miembro" y "Cuenta borrada"), `event-comments.test.ts` (autor nulo al borrar la cuenta) |
+| RF-4 | `event-comments.test.ts` (`edited_at` al editar), `comment-queries.test.ts` (`edited`), `comment-item.test.tsx` ("(editado)") |
+| RF-5 | `event-block.test.tsx` (icono, número y "N comentarios"; sin icono donde no cabe), `to-view-events.test.ts`, `comment-queries.test.ts` (`getEventsInRange` cuenta sueltos y excepciones); capturas de agenda y semana |
+| RF-6 | `comment-queries.test.ts` (50 más recientes, `hasOlder`, `before`), `event-comments.test.tsx` ("Ver anteriores" añade arriba) |
+| RF-7 | `event-comments.test.ts` (propietario, Editor y Lector comentan), `comment-form.test.tsx`, `event-panel.test.tsx` (Lector); a mano como Lector |
+| RF-8 | `event-comments.test.tsx` (al final y campo vacío), `comment-form.test.tsx`, `comment-actions.test.ts` (devuelve la lista) |
+| RF-9 | `event-comments.test.ts` (trigger: recorta extremos, conserva saltos, 1.000), `comments-core.test.ts` (`commentBodySchema`, emojis como un carácter) |
+| RF-10 | `comment-form.test.tsx` (no envía y lo explica junto al campo, contador), `comment-actions.test.ts` (`fieldError`), `event-comments.test.ts` (`check` en la base de datos) |
+| RF-11 | `comments-core.test.ts` (`linkify`), `comment-item.test.tsx` (enlace en otra pestaña, HTML como texto); a mano |
+| RF-12 | `comment-form.test.tsx` (conserva el texto y muestra el error), `comment-actions.test.ts`, `comments-core.test.ts` (mensajes) |
+| RF-13 | `event-comments.test.ts` (Lector comenta un evento traído) |
+| RF-14 | `event-comments.test.ts` (el autor edita), `comment-item.test.tsx` (edición en línea con las reglas del texto), `comment-actions.test.ts`; a mano |
+| RF-15 | `event-comments.test.ts` (el autor borra), `comment-item.test.tsx` (pide confirmación), `comment-actions.test.ts`; a mano |
+| RF-16 | `event-comments.test.ts` (el propietario borra lo ajeno; Editor y Lector no; sin propietario nadie), `comment-queries.test.ts` (`canDelete`); a mano |
+| RF-17 | `event-comments.test.ts` (nadie edita lo ajeno, solo cambia `body`), `comment-item.test.tsx` (sin "Editar") |
+| RF-18 | `event-comments.test.ts` (borrar el evento, el calendario o la serie) |
+| RF-19 | `event-comments.test.ts` (`sync_apply_events` quita el evento traído) |
+| RF-20 | `event-comments.test.tsx` (sondeo cada 20 s con la pestaña visible, anuncio `aria-live`); a mano con dos usuarios |
+| RF-21 | `event-comments.test.tsx` (lo editado y lo borrado se actualizan; edición cerrada si desaparece), `comment-queries.test.ts` (`since`) |
+| RF-22 | `event-comments.test.ts` (ajeno y `anon` no leen) |
+| RF-23 | `event-comments.test.ts` (expulsado deja de leer y sus comentarios siguen) |
+| RF-24 | `event-comments.test.ts` (ninguna columna con email), `comment-queries.test.ts` (sin email en la respuesta) |
+| RF-25 | Duplicar no lee comentarios (`load-new-event.ts` no cambia); a mano: la copia de un evento comentado no tiene comentarios |
+| RF-26 | `event-comments.test.ts` (mover y `merge_calendars` los conservan) |
+| RF-27 | `event-comments.test.ts` (`copy_calendar_for_owner` los copia con autor y fechas) |
+| RF-28 | `event-comments.test.ts` (no en la fila de la serie; sí en la excepción; `series_loss` los cuenta), `comment-actions.test.ts` (materializa la repetición), `comment-queries.test.ts` (cada repetición los suyos), `series-scope-dialog.test.tsx` ("y 4 comentarios"); a mano |
+| Casos límite | Evento borrado al enviar y Lector expulsado (`comment-actions.test.ts`, `event-comments.test.tsx`), doble envío (`event-comments.test.ts` con `client_id`, `comment-form.test.tsx`), emojis y otros idiomas (`comments-core.test.ts`), calendario sin propietario (`event-comments.test.ts`) |
 
 ## Trazabilidad RF → tareas
 

@@ -54,7 +54,7 @@ function CommentMark({ count, icon }: { count?: number; icon: boolean }) {
         <>
           {" "}
           <CommentIcon />
-          <span aria-hidden="true" className="tabular-nums">
+          <span aria-hidden="true" className="ml-0.5 tabular-nums">
             {count}
           </span>
         </>

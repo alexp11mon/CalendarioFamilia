@@ -44,7 +44,7 @@
   Hecho cuando: `npm run test:db -- event-comments event-series` en verde. Cubre: RF-18, RF-19, RF-26, RF-27, RF-28 | Módulo: comments-copy, comments-schema
   Evidencia (2026-10-31): rojo en la copia y en `series_loss` (2 de 24 tests). Migración `20261031150000_comments_copy_loss.sql` aplicada en dev y tipos regenerados; `event-series.test.ts` actualizado con la columna `comments`. `test:db -- event-comments event-series event-images` y `orphan` en verde. typecheck, format y build correctos, lint con los 2 avisos previos, `npm test` 1738 tests.
 
-- [ ] T3 Escribir la lógica pura de los comentarios
+- [x] T3 Escribir la lógica pura de los comentarios
   Pasos:
   - Primero, `tests/unit/comments-core.test.ts` en rojo:
     - `commentBodySchema`: recorta los extremos, conserva los saltos de línea, rechaza vacío y más de 1.000 con mensaje en español, acepta emojis y otros idiomas;
@@ -54,6 +54,7 @@
   - Después, `src/lib/comments/limits.ts`, `schemas.ts`, `linkify.ts`, `relative-time.ts` y `error-messages.ts`.
 
   Hecho cuando: `npm test -- comments-core` en verde. Cubre: RF-2, RF-9, RF-10, RF-11, RF-12 | Módulo: comments-core
+  Evidencia (2026-10-31): rojo sin los módulos. `npm test -- comments-core` 16 tests en verde. typecheck, format y build correctos, lint con los 2 avisos previos, `npm test` 190 archivos y 1754 tests.
 
 - [ ] T4 Leer los comentarios de un evento por páginas
   Pasos:

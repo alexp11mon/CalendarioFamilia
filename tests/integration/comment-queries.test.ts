@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { DELETED_ACCOUNT, FORMER_MEMBER } from "@/lib/account/author-label";
+import { getEventsInRange } from "@/lib/calendar/queries";
 import { listComments } from "@/lib/comments/queries";
 import { occurrenceId } from "@/lib/recurrence/occurrence-id";
 import {
@@ -213,5 +214,43 @@ describe("occurrences (RF-28)", () => {
       viewer.id,
     );
     expect(withoutRow).toEqual({ comments: [], hasOlder: false });
+  });
+});
+
+// Spec 014, T10: the number of comments in the views (RF-5, plan D11).
+describe("getEventsInRange counts the comments (RF-5)", () => {
+  it("of single events and exceptions; occurrences without a row have none", async () => {
+    const single = await createEvent({
+      starts_at: "2027-03-01T10:00:00Z",
+      ends_at: "2027-03-01T11:00:00Z",
+    });
+    await seed(single, [owner.id, viewer.id]);
+    const series = await createEvent({
+      starts_at: "2027-03-02T17:00:00Z",
+      ends_at: "2027-03-02T18:00:00Z",
+      recurrence: "FREQ=WEEKLY;INTERVAL=1;BYDAY=TU;COUNT=2",
+      recurrence_tz: "Europe/Madrid",
+      recurrence_until: "2027-03-09T18:00:00Z",
+    });
+    const start = "2027-03-09T17:00:00Z";
+    const exception = await createEvent({
+      starts_at: start,
+      ends_at: "2027-03-09T18:00:00Z",
+      series_id: series,
+      original_start: start,
+    });
+    await seed(exception, [viewer.id]);
+
+    const events = await getEventsInRange(
+      viewer.client,
+      new Date("2027-03-01T00:00:00Z"),
+      new Date("2027-03-15T00:00:00Z"),
+    );
+    const counts = Object.fromEntries(
+      events.map((event) => [event.id, event.commentCount]),
+    );
+    expect(counts[single]).toBe(2);
+    expect(counts[exception]).toBe(1);
+    expect(counts[occurrenceId(series, "2027-03-02T17:00:00Z")]).toBe(0);
   });
 });

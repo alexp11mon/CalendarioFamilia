@@ -109,3 +109,47 @@ describe("EventBlock of a series", () => {
     expect(link()).not.toHaveTextContent("Se repite");
   });
 });
+
+// Spec 014 RF-5: the icon and the number of comments, where they fit.
+describe("EventBlock with comments", () => {
+  const COMMENTED = { ...EVENT, imageCount: 0, commentCount: 3 };
+
+  it.each(["line", "grid", "card"] as const)(
+    "marks the %s block with the comment icon, the number and the words",
+    (shape) => {
+      const { container } = render(
+        <EventBlock event={COMMENTED} timeZone={TZ} shape={shape} />,
+      );
+      expect(container.querySelector("svg[data-icon=comment]")).not.toBeNull();
+      expect(link()).toHaveTextContent("3");
+      expect(screen.getByText("3 comentarios", { exact: false })).toHaveClass(
+        "sr-only",
+      );
+    },
+  );
+
+  it("says one comment in singular", () => {
+    render(
+      <EventBlock
+        event={{ ...COMMENTED, commentCount: 1 }}
+        timeZone={TZ}
+        shape="card"
+      />,
+    );
+    expect(link()).toHaveTextContent("1 comentario");
+    expect(link()).not.toHaveTextContent("1 comentarios");
+  });
+
+  it("hides the icon and the number where they do not fit, keeping the words", () => {
+    const { container } = render(
+      <EventBlock event={COMMENTED} timeZone={TZ} shape="grid" icons={false} />,
+    );
+    expect(container.querySelector("svg")).toBeNull();
+    expect(link()).toHaveTextContent("3 comentarios");
+  });
+
+  it("an event without comments has no mark", () => {
+    render(<EventBlock event={EVENT} timeZone={TZ} shape="card" />);
+    expect(link()).not.toHaveTextContent("comentario");
+  });
+});

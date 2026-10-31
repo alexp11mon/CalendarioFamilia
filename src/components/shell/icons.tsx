@@ -44,6 +44,28 @@ export function ImageIcon() {
   );
 }
 
+/** Comments (spec 014 RF-5): a speech bubble, the size of ImageIcon. */
+export function CommentIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      width="14"
+      height="14"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.75"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      focusable="false"
+      data-icon="comment"
+      className="inline-block shrink-0 align-[-2px]"
+    >
+      <path d="M21 12a8 8 0 0 1-11.6 7.1L4 20.5l1.4-4.9A8 8 0 1 1 21 12Z" />
+    </svg>
+  );
+}
+
 /** A series (spec 013 RF-9): two arrows in a loop, the size of ImageIcon. */
 export function RepeatIcon() {
   return (

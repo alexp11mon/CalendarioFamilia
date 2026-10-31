@@ -2,7 +2,7 @@ import Link from "next/link";
 import type { CSSProperties } from "react";
 import type { CalendarEventItem } from "@/lib/calendar/layout";
 import { formatTime } from "@/lib/calendar/time-zone";
-import { ImageIcon, RepeatIcon } from "@/components/shell/icons";
+import { CommentIcon, ImageIcon, RepeatIcon } from "@/components/shell/icons";
 
 /**
  * Mark of an event with images (spec 012 RF-12). The words always reach
@@ -45,6 +45,28 @@ function RepeatMark({ series, icon }: { series: boolean; icon: boolean }) {
   );
 }
 
+/** Comments and their number (spec 014 RF-5), as ImageMark. */
+function CommentMark({ count, icon }: { count?: number; icon: boolean }) {
+  if (!count) return null;
+  return (
+    <>
+      {icon ? (
+        <>
+          {" "}
+          <CommentIcon />
+          <span aria-hidden="true" className="tabular-nums">
+            {count}
+          </span>
+        </>
+      ) : null}
+      <span className="sr-only">
+        {" "}
+        {count} {count === 1 ? "comentario" : "comentarios"}
+      </span>
+    </>
+  );
+}
+
 const SHAPES = {
   // Month and all-day strip: one line, as Google (spec 016 RF-34, RF-40).
   line: "block h-[18px] truncate rounded-md px-1 text-xs leading-[18px]",
@@ -72,7 +94,7 @@ export function EventBlock({
   shape: keyof typeof SHAPES;
   /** The agenda's second line ("A las 11:15–14:15 en …"). */
   line?: string | null;
-  /** The icons of images and series, where they fit. */
+  /** The icons of images, series and comments, where they fit. */
   icons?: boolean;
   style?: CSSProperties;
   className?: string;
@@ -94,6 +116,7 @@ export function EventBlock({
             <span className="font-bold">{event.title}</span>
             <RepeatMark series={Boolean(event.seriesId)} icon={icons} />
             <ImageMark count={event.imageCount} icon={icons} />
+            <CommentMark count={event.commentCount} icon={icons} />
           </span>
           {line ? <span className="truncate">{line}</span> : null}
         </>
@@ -102,6 +125,7 @@ export function EventBlock({
           <span className="font-bold">{event.title}</span>
           <RepeatMark series={Boolean(event.seriesId)} icon={icons} />
           <ImageMark count={event.imageCount} icon={icons} />
+          <CommentMark count={event.commentCount} icon={icons} />
           {shape === "grid" && event.location ? (
             <span className="block">{event.location}</span>
           ) : null}

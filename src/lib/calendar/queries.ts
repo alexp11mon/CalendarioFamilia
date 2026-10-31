@@ -432,6 +432,8 @@ export interface CalendarEventRecord {
   location: string | null;
   /** Ready images, for the mark of the views (spec 012 RF-12, plan D14). */
   imageCount: number;
+  /** Comments, for the mark of the views (spec 014 RF-5, plan D11). */
+  commentCount: number;
   /** Series of an occurrence, for the repeat mark (spec 013 RF-10). */
   seriesId: string | null;
 }
@@ -450,7 +452,7 @@ export async function getEventsInRange(
     supabase
       .from("events")
       .select(
-        "id, calendar_id, title, starts_at, ends_at, all_day, color, category_id, location, series_id, event_images(count)",
+        "id, calendar_id, title, starts_at, ends_at, all_day, color, category_id, location, series_id, event_images(count), event_comments(count)",
       )
       // The uploader also sees their pending images: count the ready ones only.
       .eq("event_images.status", "ready")
@@ -484,6 +486,7 @@ export async function getEventsInRange(
     // The agenda rows show the place (spec 005 RF-35).
     location: row.location,
     imageCount: row.event_images[0]?.count ?? 0,
+    commentCount: row.event_comments[0]?.count ?? 0,
     seriesId: row.series_id,
   }));
   const seriesRows = series.data ?? [];
@@ -524,6 +527,8 @@ export async function getEventsInRange(
       categoryId: row.category_id,
       location: row.location,
       imageCount: 0,
+      // An occurrence without its own row has no comments (RF-28).
+      commentCount: 0,
       seriesId: row.id,
     });
   }

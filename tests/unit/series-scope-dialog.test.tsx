@@ -126,6 +126,16 @@ describe("lossText", () => {
     [{ exceptions: 1, images: 0 }, "Se perderá 1 cambio."],
     [{ exceptions: 0, images: 1 }, "Se perderá 1 imagen."],
     [{ exceptions: 3, images: 1 }, "Se perderán 3 cambios y 1 imagen."],
+    // Spec 014 plan D6: the comments of the exceptions go too.
+    [{ exceptions: 0, images: 0, comments: 1 }, "Se perderá 1 comentario."],
+    [
+      { exceptions: 2, images: 3, comments: 4 },
+      "Se perderán 2 cambios, 3 imágenes y 4 comentarios.",
+    ],
+    [
+      { exceptions: 1, images: 0, comments: 2 },
+      "Se perderán 1 cambio y 2 comentarios.",
+    ],
   ])("%o → %s", (loss, text) => {
     expect(lossText(loss)).toBe(text);
   });

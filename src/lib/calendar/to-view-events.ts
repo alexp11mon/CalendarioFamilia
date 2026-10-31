@@ -28,6 +28,7 @@ export function toViewEvents(
       DEFAULT_CALENDAR_COLOR,
     location: record.location,
     imageCount: record.imageCount,
+    commentCount: record.commentCount,
     seriesId: record.seriesId,
     calendarName: byId.get(record.calendarId)?.name ?? "",
   }));

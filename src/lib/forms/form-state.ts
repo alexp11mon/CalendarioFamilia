@@ -20,6 +20,8 @@ export interface FormState<Field extends string> {
 export interface Loss {
   exceptions: number;
   images: number;
+  /** Comments of the exceptions that go (spec 014 plan D6). */
+  comments?: number;
 }
 
 /** "gone": deleted in Google while it was being changed (spec 009 RF-25). */

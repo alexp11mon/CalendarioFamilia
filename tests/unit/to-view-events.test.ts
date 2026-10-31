@@ -12,6 +12,7 @@ const RECORD = {
   categoryId: null,
   location: null,
   imageCount: 0,
+  commentCount: 2,
   seriesId: "s1",
 };
 
@@ -26,6 +27,8 @@ describe("toViewEvents (spec 013 RF-10)", () => {
       seriesId: "s1",
       color: "#A0C4FF",
       calendarName: "Familia",
+      // Spec 014 RF-5.
+      commentCount: 2,
     });
   });
 

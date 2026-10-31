@@ -126,7 +126,7 @@
   Hecho cuando: `npm test -- event-comments` en verde. Cubre: RF-20, RF-21 | Módulo: comments-ui
   Evidencia (2026-10-31): rojo con 4 casos nuevos de sondeo. `npm test -- event-comments` 13 tests en verde: cada 20 s con la pestaña visible, nada oculta y al momento al volver, anuncio en `aria-live` sin mover el foco, edición cerrada con "Este comentario ya no existe" y sin sondeo al desmontar. typecheck, format y build correctos, lint con los 2 avisos previos, `npm test` 1803 tests (`agenda-view` falló una vez con la máquina cargada y pasa al repetir).
 
-- [ ] T10 Marcar en las vistas los eventos con comentarios y avisar de los que se perderían en una serie
+- [x] T10 Marcar en las vistas los eventos con comentarios y avisar de los que se perderían en una serie
   Pasos:
   - Primero, en rojo:
     - `event-block.test.tsx` y `to-view-events.test.ts`: icono con el número y "N comentarios" para lectores de pantalla, con las reglas de cabida de las imágenes;
@@ -135,6 +135,7 @@
   - Después, `commentCount` en `getEventsInRange` y `to-view-events`, `CommentIcon`, `EventBlock`, `lossText` y la lectura de `series_loss` en las acciones.
 
   Hecho cuando: `npm test -- event-block to-view-events series-scope-dialog series-actions` y `npm run test:db -- comment-queries` en verde. Cubre: RF-5, RF-28 | Módulo: comments-marks
+  Evidencia (2026-10-31): rojo en 11 casos de `event-block`, `to-view-events`, `series-scope-dialog` y `series-actions`. `npm test -- event-block to-view-events series-scope-dialog series-actions event-detail event-form` 102 tests y `test:db -- comment-queries event-series` 41 tests en verde (`getEventsInRange` cuenta los de sueltos y excepciones). typecheck, format y build correctos, lint con los 2 avisos previos, `npm test` 1812 tests.
 
 - [ ] T11 Validar la spec RF por RF
   Pasos:

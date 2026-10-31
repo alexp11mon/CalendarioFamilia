@@ -282,7 +282,7 @@ describe("updateEvent on an occurrence", () => {
     h.event = OCCURRENCE;
     h.rpc.mockImplementation(async (fn: string) =>
       fn === "series_loss"
-        ? { data: [{ exceptions: 0, images: 0 }], error: null }
+        ? { data: [{ exceptions: 0, images: 0, comments: 0 }], error: null }
         : { data: "new-id", error: null },
     );
   });
@@ -337,7 +337,7 @@ describe("updateEvent on an occurrence", () => {
   it("returns what would be lost and saves nothing until confirmed (RF-19, RF-24b)", async () => {
     h.rpc.mockImplementation(async (fn: string) =>
       fn === "series_loss"
-        ? { data: [{ exceptions: 2, images: 3 }], error: null }
+        ? { data: [{ exceptions: 2, images: 3, comments: 4 }], error: null }
         : { data: "new-id", error: null },
     );
     const state = await updateEvent(
@@ -345,7 +345,7 @@ describe("updateEvent on an occurrence", () => {
       EMPTY,
       occurrenceForm({ scope: "all", repeat: "daily" }),
     );
-    expect(state.loss).toEqual({ exceptions: 2, images: 3 });
+    expect(state.loss).toEqual({ exceptions: 2, images: 3, comments: 4 });
     expect(state.done).toBeUndefined();
     expect(rpcCalls("update_series")).toEqual([]);
 
@@ -457,7 +457,7 @@ describe("deleteEvent on an occurrence", () => {
     h.event = OCCURRENCE;
     h.rpc.mockImplementation(async (fn: string) =>
       fn === "series_loss"
-        ? { data: [{ exceptions: 0, images: 0 }], error: null }
+        ? { data: [{ exceptions: 0, images: 0, comments: 0 }], error: null }
         : { data: null, error: null },
     );
   });
@@ -490,7 +490,7 @@ describe("deleteEvent on an occurrence", () => {
   it("warns of the images that go and deletes once confirmed (RF-24b)", async () => {
     h.rpc.mockImplementation(async (fn: string) =>
       fn === "series_loss"
-        ? { data: [{ exceptions: 1, images: 4 }], error: null }
+        ? { data: [{ exceptions: 1, images: 4, comments: 0 }], error: null }
         : { data: null, error: null },
     );
     const state = await deleteEvent(
@@ -499,7 +499,7 @@ describe("deleteEvent on an occurrence", () => {
       {},
       scoped({ scope: "all" }),
     );
-    expect(state).toEqual({ loss: { exceptions: 1, images: 4 } });
+    expect(state).toEqual({ loss: { exceptions: 1, images: 4, comments: 0 } });
     expect(rpcCalls("delete_occurrences")).toEqual([]);
 
     await deleteEvent(

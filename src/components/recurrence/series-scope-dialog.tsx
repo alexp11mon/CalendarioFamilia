@@ -13,15 +13,22 @@ const SCOPES: { value: SeriesScope; label: string }[] = [
 ];
 
 /** "Se perderán 2 cambios y 3 imágenes." (RF-19, RF-24b). */
-export function lossText({ exceptions, images }: Loss): string {
+export function lossText({ exceptions, images, comments = 0 }: Loss): string {
   const parts = [
     exceptions
       ? `${exceptions} ${exceptions === 1 ? "cambio" : "cambios"}`
       : "",
     images ? `${images} ${images === 1 ? "imagen" : "imágenes"}` : "",
+    comments
+      ? `${comments} ${comments === 1 ? "comentario" : "comentarios"}`
+      : "",
   ].filter(Boolean);
-  const plural = exceptions + images > 1;
-  return `Se ${plural ? "perderán" : "perderá"} ${parts.join(" y ")}.`;
+  const plural = exceptions + images + comments > 1;
+  const list =
+    parts.length > 1
+      ? `${parts.slice(0, -1).join(", ")} y ${parts.at(-1)}`
+      : parts[0];
+  return `Se ${plural ? "perderán" : "perderá"} ${list}.`;
 }
 
 /**

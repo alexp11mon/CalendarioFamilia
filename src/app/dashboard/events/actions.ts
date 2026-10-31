@@ -186,8 +186,13 @@ async function unconfirmedLoss(
   });
   if (error) throw error;
   const row = data?.[0];
-  if (!row || row.exceptions + row.images === 0) return null;
-  return { exceptions: row.exceptions, images: row.images };
+  if (!row || row.exceptions + row.images + row.comments === 0) return null;
+  return {
+    exceptions: row.exceptions,
+    images: row.images,
+    // Spec 014 plan D6: the comments of those exceptions go too.
+    comments: row.comments,
+  };
 }
 
 function readScope(formData: FormData): SeriesScope | null {

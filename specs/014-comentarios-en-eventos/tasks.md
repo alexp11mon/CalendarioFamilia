@@ -103,7 +103,7 @@
   Hecho cuando: `npm test -- comment-form` en verde. Cubre: RF-7, RF-8, RF-9, RF-10, RF-12 | Módulo: comments-ui
   Evidencia (2026-10-31): rojo sin el componente. `npm test -- comment-form` 8 tests en verde (y `comments-core` con "1.000": es-ES no agrupa cuatro cifras, ahora `formatCount`). Un reintento del mismo texto reutiliza el `client_id`. typecheck, format y build correctos, lint con los 2 avisos previos, `npm test` 1788 tests.
 
-- [ ] T8 Mostrar la sección "Comentarios" en el detalle
+- [x] T8 Mostrar la sección "Comentarios" en el detalle
   Pasos:
   - Primero, `tests/unit/event-comments.test.tsx` en rojo y casos en `event-detail.test.tsx`:
     - esqueleto mientras carga, lista en orden, "Ver anteriores" añade los antiguos arriba, "Aún no hay comentarios";
@@ -112,6 +112,7 @@
   - Después, `src/components/comments/event-comments.tsx`, `comments-skeleton.tsx` y su sitio en `EventDetail`.
 
   Hecho cuando: `npm test -- event-comments event-detail` en verde. Cubre: RF-1, RF-6, RF-7, RF-8, RF-13 | Módulo: comments-ui
+  Evidencia (2026-10-31): rojo sin la sección. `npm test -- event-comments event-panel event-detail` en verde (8 de la sección y 2 nuevos en `event-panel.test.tsx`: ventana y página, también para un Lector). La sección va en `EventPanel`, que usan la ventana y la página completa, también con eventos traídos. typecheck, format y build correctos, lint con los 2 avisos previos, `npm test` 1798 tests.
 
 - [ ] T9 Actualizar los comentarios abiertos cada 20 segundos
   Pasos:

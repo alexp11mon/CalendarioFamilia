@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { EventComments } from "@/components/comments/event-comments";
 import { EventImages } from "@/components/images/event-images";
 import { ImageUploader } from "@/components/images/image-uploader";
 import { Button } from "@/components/ui/button";
@@ -87,6 +88,7 @@ export function EventPanel({
       canEdit={canEdit}
       deleteAction={deleteAction}
       onDeleted={modal?.finish}
+      comments={<EventComments eventId={detail.id} timeZone={timeZone} />}
       media={
         <>
           <EventImages

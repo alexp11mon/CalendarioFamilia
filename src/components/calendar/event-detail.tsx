@@ -56,6 +56,7 @@ export function EventDetail({
   actions,
   onDeleted,
   media,
+  comments,
 }: {
   event: EventDetailData;
   timeZone: string;
@@ -67,6 +68,8 @@ export function EventDetail({
   onDeleted?: (done: Done) => void;
   /** The event's images and "Añadir imágenes" (spec 012 RF-1, RF-9). */
   media?: ReactNode;
+  /** "Comentarios", for any member (spec 014 RF-1, RF-7). */
+  comments?: ReactNode;
 }) {
   return (
     <article className="flex flex-col gap-4">
@@ -132,6 +135,7 @@ export function EventDetail({
           )}
         </div>
       ) : null}
+      {comments}
     </article>
   );
 }

@@ -11,6 +11,14 @@ import type { ConfirmState } from "@/lib/forms/form-state";
 // Spec 008, T6: the event detail with Editar, Duplicar and Borrar (RF-2, RF-3, RF-35, RF-36).
 const router = vi.hoisted(() => ({ back: vi.fn(), refresh: vi.fn() }));
 vi.mock("next/navigation", () => ({ useRouter: () => router }));
+// Spec 014: the comments section loads through its actions.
+const comments = vi.hoisted(() => ({
+  loadComments: vi.fn(async () => ({
+    ok: true,
+    page: { comments: [], hasOlder: false },
+  })),
+}));
+vi.mock("@/app/dashboard/events/comment-actions", () => comments);
 
 beforeAll(() => {
   HTMLDialogElement.prototype.showModal = function showModal() {
@@ -152,5 +160,23 @@ describe("EventPanel", () => {
     expect(
       screen.queryByRole("button", { name: "Añadir imágenes" }),
     ).toBeNull();
+  });
+
+  it("shows the comments in the window and on the page, also to viewers (spec 014 RF-1, RF-7)", async () => {
+    setup({ canEdit: false, inWindow: true });
+    expect(
+      await screen.findByRole("heading", { name: "Comentarios" }),
+    ).toBeInTheDocument();
+    expect(
+      await screen.findByLabelText("Escribe un comentario"),
+    ).toBeInTheDocument();
+    expect(comments.loadComments).toHaveBeenCalledWith("ev-1");
+  });
+
+  it("shows the comments on the full page", async () => {
+    setup({ canEdit: false });
+    expect(
+      await screen.findByRole("heading", { name: "Comentarios" }),
+    ).toBeInTheDocument();
   });
 });

@@ -1,12 +1,12 @@
 import { CALENDAR_MESSAGES } from "@/lib/calendar/error-messages";
-import { MAX_COMMENT_LENGTH } from "./limits";
+import { MAX_COMMENT_LENGTH, formatCount } from "./limits";
 
 // Messages of the comments (spec 014, plan "Contratos"). Usable in the
 // browser: no server imports.
 export const COMMENT_MESSAGES = {
   empty: "Escribe un comentario.",
-  tooLong: `El comentario no puede pasar de ${MAX_COMMENT_LENGTH.toLocaleString("es-ES")} caracteres.`,
-  length: `El comentario debe tener entre 1 y ${MAX_COMMENT_LENGTH.toLocaleString("es-ES")} caracteres.`,
+  tooLong: `El comentario no puede pasar de ${formatCount(MAX_COMMENT_LENGTH)} caracteres.`,
+  length: `El comentario debe tener entre 1 y ${formatCount(MAX_COMMENT_LENGTH)} caracteres.`,
   gone: "Este evento ya no existe.",
   commentGone: "Este comentario ya no existe.",
   noAccess: "Ya no tienes acceso a este calendario.",

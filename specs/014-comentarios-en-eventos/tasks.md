@@ -92,7 +92,7 @@
   Hecho cuando: `npm test -- comment-item` en verde. Cubre: RF-2, RF-4, RF-11, RF-14, RF-15, RF-16, RF-17 | Módulo: comments-ui
   Evidencia (2026-10-31): rojo sin los componentes. `npm test -- comment-item` 9 tests en verde. typecheck, format y build correctos, lint con los 2 avisos previos, `npm test` 192 archivos y 1780 tests. Las capturas de la sección se hacen en T11.
 
-- [ ] T7 Añadir el formulario "Comentar"
+- [x] T7 Añadir el formulario "Comentar"
   Pasos:
   - Primero, `tests/unit/comment-form.test.tsx` en rojo:
     - etiqueta visible, botón "Comentar" con `min-h-11`, error junto al campo (`aria-describedby`) si está vacío o pasa de 1.000, contador al acercarse al límite;
@@ -101,6 +101,7 @@
   - Después, `src/components/comments/comment-form.tsx`.
 
   Hecho cuando: `npm test -- comment-form` en verde. Cubre: RF-7, RF-8, RF-9, RF-10, RF-12 | Módulo: comments-ui
+  Evidencia (2026-10-31): rojo sin el componente. `npm test -- comment-form` 8 tests en verde (y `comments-core` con "1.000": es-ES no agrupa cuatro cifras, ahora `formatCount`). Un reintento del mismo texto reutiliza el `client_id`. typecheck, format y build correctos, lint con los 2 avisos previos, `npm test` 1788 tests.
 
 - [ ] T8 Mostrar la sección "Comentarios" en el detalle
   Pasos:

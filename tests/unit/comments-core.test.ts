@@ -30,6 +30,9 @@ describe("commentBodySchema (RF-9, RF-10)", () => {
     const result = commentBodySchema.safeParse("a".repeat(1001));
     expect(result.success).toBe(false);
     expect(result.error?.issues[0].message).toBe(COMMENT_MESSAGES.tooLong);
+    expect(COMMENT_MESSAGES.tooLong).toBe(
+      "El comentario no puede pasar de 1.000 caracteres.",
+    );
   });
 
   it("accepts only emojis and other languages", () => {

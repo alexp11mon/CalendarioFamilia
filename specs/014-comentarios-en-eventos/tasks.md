@@ -81,7 +81,7 @@
   Hecho cuando: `npm test -- comment-actions` en verde. Cubre: RF-7, RF-8, RF-10, RF-12, RF-13, RF-14, RF-15, RF-16, RF-28 | Módulo: comments-actions
   Evidencia (2026-10-31): rojo sin `comment-actions.ts`. `npm test -- comment-actions` 17 tests en verde. Desviación menor del contrato: las escrituras reciben además `since` (el comentario más antiguo cargado) para devolver la lista como la muestra la sección. typecheck, format y build correctos, lint con los 2 avisos previos, `npm test` 1771 tests.
 
-- [ ] T6 Pintar un comentario con su autor, su fecha y sus enlaces
+- [x] T6 Pintar un comentario con su autor, su fecha y sus enlaces
   Pasos:
   - Primero, `tests/unit/comment-item.test.tsx` en rojo:
     - avatar, nombre, texto con saltos de línea, `<time>` con la fecha relativa y la completa accesible, "(editado)";
@@ -90,6 +90,7 @@
   - Después, `src/components/comments/comment-text.tsx` y `comment-item.tsx`.
 
   Hecho cuando: `npm test -- comment-item` en verde. Cubre: RF-2, RF-4, RF-11, RF-14, RF-15, RF-16, RF-17 | Módulo: comments-ui
+  Evidencia (2026-10-31): rojo sin los componentes. `npm test -- comment-item` 9 tests en verde. typecheck, format y build correctos, lint con los 2 avisos previos, `npm test` 192 archivos y 1780 tests. Las capturas de la sección se hacen en T11.
 
 - [ ] T7 Añadir el formulario "Comentar"
   Pasos:

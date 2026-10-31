@@ -10,6 +10,7 @@ export const COMMENT_MESSAGES = {
   gone: "Este evento ya no existe.",
   commentGone: "Este comentario ya no existe.",
   noAccess: "Ya no tienes acceso a este calendario.",
+  forbidden: CALENDAR_MESSAGES.forbidden,
   connection: CALENDAR_MESSAGES.connection,
 } as const;
 

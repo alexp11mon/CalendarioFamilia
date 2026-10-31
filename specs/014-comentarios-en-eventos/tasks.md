@@ -68,7 +68,7 @@
   Hecho cuando: `npm run test:db -- comment-queries` en verde. Cubre: RF-1, RF-2, RF-3, RF-4, RF-6, RF-16, RF-17, RF-21, RF-24, RF-28 | Módulo: comments-queries
   Evidencia (2026-10-31): rojo sin `queries.ts`. `test:db -- comment-queries` 6 tests en verde. typecheck, format y build correctos, lint con los 2 avisos previos, `npm test` 1754 tests.
 
-- [ ] T5 Crear las acciones de cargar, comentar, editar y borrar
+- [x] T5 Crear las acciones de cargar, comentar, editar y borrar
   Pasos:
   - Primero, `tests/unit/comment-actions.test.ts` en rojo, con Supabase simulado:
     - `addComment` valida el texto (`fieldError`), inserta con el `client_id` y devuelve la lista; `23505` cuenta como éxito;
@@ -79,6 +79,7 @@
   - Después, `src/app/dashboard/events/comment-actions.ts`.
 
   Hecho cuando: `npm test -- comment-actions` en verde. Cubre: RF-7, RF-8, RF-10, RF-12, RF-13, RF-14, RF-15, RF-16, RF-28 | Módulo: comments-actions
+  Evidencia (2026-10-31): rojo sin `comment-actions.ts`. `npm test -- comment-actions` 17 tests en verde. Desviación menor del contrato: las escrituras reciben además `since` (el comentario más antiguo cargado) para devolver la lista como la muestra la sección. typecheck, format y build correctos, lint con los 2 avisos previos, `npm test` 1771 tests.
 
 - [ ] T6 Pintar un comentario con su autor, su fecha y sus enlaces
   Pasos:

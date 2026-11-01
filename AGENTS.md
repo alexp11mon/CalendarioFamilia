@@ -12,7 +12,7 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 Contexto completo del proyecto para cualquier IA que empiece a trabajar en él. Léelo entero antes de tocar código. El bloque de arriba lo gestiona `next dev`: no lo edites; todo lo de debajo es documentación del proyecto y `next dev` lo respeta.
 
-> Última actualización: 2026-11-01, al cerrar la spec 017 (mover eventos, menú y "Deshacer"), con sus 2 migraciones aplicadas en prod.
+> Última actualización: 2026-11-01, al implementar la spec 018 (iCloud) en la rama `018-sincronizacion-icloud`: T2–T14 hechas, pendientes la comprobación con una cuenta real (T1), sus 2 migraciones en prod y la demo en el iPhone (T15).
 
 ## 1. Qué es
 
@@ -45,7 +45,7 @@ Contexto completo del proyecto para cualquier IA que empiece a trabajar en él. 
 | 015-asistente-de-chat | Asistente de chat sobre los eventos y la disponibilidad común, con un proveedor LLM gratuito (no Gemini) | **Spec aprobada** (2026-10-29), sin plan |
 | 016-calendario-estilo-google | Calendario como Google Calendar en el móvil: bloques rellenos, cabecera con cajón y "+", deslizar, agenda continua y fila de meses (enmienda 4 de la constitución) | **Cerrada** (2026-10-30), T1–T13 hechas; sin migraciones. La prueba en el iPhone se hace en producción |
 | 017-mover-eventos-y-menu | Mover y redimensionar arrastrando, menú contextual en el ordenador, "Deshacer" en los avisos, detalle en hoja inferior en el móvil, pellizcar para ampliar y atajos nuevos (enmienda 5) | **Cerrada** (2026-11-01), T1–T16 hechas; 2 migraciones aplicadas en prod |
-| 018-sincronizacion-icloud | Calendarios de iCloud (iPhone) por CalDAV con contraseña específica de app, con el mismo alcance que Google en la 007 y la 009 (leer, escribir, renombrar, crear y subir). Dependencia `tsdav` aprobada; se instala en la primera tarea | **Spec aprobada** (2026-11-01), plan y tareas aprobados, en implementación; enmienda 6 aplicada |
+| 018-sincronizacion-icloud | Calendarios de iCloud (iPhone) por CalDAV con contraseña específica de app, con el mismo alcance que Google en la 007 y la 009 (leer, escribir, renombrar, crear y subir). Dependencia `tsdav` aprobada; se instala en la primera tarea | **Implementada** (2026-11-01) en la rama `018-sincronizacion-icloud`, T2–T14 hechas; pendientes la comprobación con una cuenta real (T1), las 2 migraciones en prod y la demo (T15); enmienda 6 aplicada |
 
 Las specs 001–004 (cerradas, no se editan) citan la gestión de cuenta como "spec 005" y OAuth como "spec 006": hoy son la 006 y la 007.
 
@@ -178,6 +178,15 @@ Añadido por la spec 017 (en producción desde el 2026-11-01):
 - **Detalle en hoja inferior en el móvil** (`EventModal variant="sheet"`, solo el detalle interceptado a ≤ 768 px): abre a media altura, el asa (o deslizar 60 px o a 0,5 px/ms, `sheet.ts`) amplía, reduce o cierra, tocar el fondo cierra, y "Editar" o E la amplían.
 - **Pellizcar o Ctrl + rueda** cambian la altura de las horas en semana y día (24–144 px, `zoom.ts` y `use-grid-zoom.ts`), con la hora bajo el gesto fija; se recuerda en el dispositivo (`localStorage` `cafam-hour-px`).
 
+Añadido por la spec 018 (implementada en la rama `018-sincronizacion-icloud`, aún no en producción):
+
+- **Conectar iCloud** (`/dashboard/connections/new?provider=icloud`, botón "Conectar iCloud" junto a "Conectar Google"): aviso con los pasos para crear una contraseña específica de app en account.apple.com (hace falta la verificación en dos pasos) y lo que abre esa contraseña, y formulario con Apple ID y contraseña. `connectIcloud` normaliza (Apple ID en minúsculas, contraseña `abcd-efgh-ijkl-mnop`), la comprueba con un descubrimiento CalDAV real en 10 s (`verifyIcloudCredential`) y la guarda con `connect_account('icloud', …)`: en Vault va el JSON `{"v":1,"username","password"}` en lugar del token de Google, y `can_write` siempre es `true`. La contraseña nunca vuelve al navegador. Cuenta en el límite de 5 cuentas junto a las de Google.
+- **Proveedores** (`lib/sync/providers/`): `types.ts` define `ProviderSession` (listar calendarios y eventos, crear, cambiar, mover y borrar eventos, crear, renombrar y borrar calendarios); `index.ts` abre la sesión de cada conexión (`openSession`: Google renueva su token, iCloud lee la credencial) y `revokeAccess` (iCloud no revoca nada: se hace en Apple). El motor, la escritura, la subida y la creación de calendarios ya no saben qué proveedor hay detrás.
+- **iCloud por CalDAV** (`providers/icloud.ts`, único que importa `tsdav`): un `fetch` propio (`icloudFetch`) que solo habla con `caldav.icloud.com` y `pNN-caldav.icloud.com` por https, sigue las redirecciones a mano dentro de ellos, manda la autenticación Basic solo ahí y convierte las respuestas en `ProviderError` (`401` → `revoked`, `404`/`410` → `missing`, `429`/`5xx`/red/plazo → `transient`, el resto → `rejected`, con el estado en `IcloudHttpError`). Descubrimiento raíz → principal → `calendar-home-set`; los calendarios sin `VEVENT` (Recordatorios) no se ofrecen; el permiso sale de `current-user-privilege-set` (`owner`, `writer` si es compartido con escritura, `reader`) y se guarda en `google_access`.
+- **`.ics` de iCloud** (`lib/sync/icloud-ics.ts`, con `ical.js`): `expandObject` expande cada recurso en la ventana con `EXDATE`, repeticiones cambiadas y canceladas; un suelto se identifica por su `href` y una repetición por `href#<RECURRENCE-ID>` (`20261102T080000Z` o `20261015`). Al escribir, `patchIcs` cambia solo los campos que cambiaron y conserva alarmas, invitados, adjuntos y lo desconocido; una repetición se cambia en su propio `VEVENT` con `RECURRENCE-ID` y se borra con `EXDATE` (`removeOccurrence`), escritos como el `DTSTART` de la serie (misma `TZID`), como el iPhone. Cambiar lee el recurso y lo reescribe con `If-Match`; un `412` vuelve a leer una vez. Mover usa `MOVE` y, si iCloud no lo deja (403/405/501/502), copia y borra; una repetición no se mueve sola.
+- **Textos con el proveedor** (`lib/sync/provider-labels.ts`): errores de escritura (`writeErrorText`), del motor (`syncErrorText`), solo lectura, "Traído de iCloud", "Solo lectura en iCloud", la ficha de la cuenta ("Cuenta conectada"), crear calendario, desconectar (en iCloud recuerda revocar la contraseña en account.apple.com y que allí no se borra nada), la subida (elige cuenta de Google o iCloud) y el aviso de evento borrado (`done: "goneIcloud"`). El aviso `sync_revoked` de iCloud explica que cambiar la contraseña del Apple ID invalida las específicas de app y enlaza a `new?provider=icloud&reconnect=<id>` (`getNotices` busca la conexión por el correo). "Repetir" sigue deshabilitado en los calendarios traídos de los dos.
+- **Privacidad**: sección "Calendarios de iCloud" en `/privacy`.
+
 La fuente de verdad es [`docs/constitution.md`](docs/constitution.md). Resumen de lo que más afecta a un agente:
 
 - **Flujo SDD (P7):** no se escribe código sin `spec.md` → `plan.md` → `tasks.md` aprobados explícitamente por el usuario, en ese orden. Cada spec vive en `specs/NNN-nombre/`. Se implementa **una tarea `Tn` cada vez y con el test primero** (rojo → verde). Cada commit cita su tarea.
@@ -212,7 +221,7 @@ La fuente de verdad es [`docs/constitution.md`](docs/constitution.md). Resumen d
 | Calidad | ESLint 9 (`eslint-config-next` + `eslint-config-prettier`), Prettier 3 |
 | BD | Supabase CLI (`supabase` como devDependency) para migraciones y tipos |
 
-Dependencias de producción: `next`, `react`, `react-dom`, `@supabase/supabase-js`, `@supabase/ssr`, `zod` y `ical.js` (2.2.1, MPL-2.0, aprobada en la spec 004; solo se importa en `src/lib/ics/parse-ics.ts` y, desde la 013, en `src/lib/recurrence/expand.ts`, ambos solo del servidor; `no-secrets.test.ts` lo comprueba). El `package.json` no debe crecer sin aprobación.
+Dependencias de producción: `next`, `react`, `react-dom`, `@supabase/supabase-js`, `@supabase/ssr`, `zod` y `ical.js` (2.2.1, MPL-2.0, aprobada en la spec 004; solo se importa en `src/lib/ics/parse-ics.ts`, desde la 013 en `src/lib/recurrence/expand.ts` y desde la 018 en `src/lib/sync/icloud-ics.ts`, todos solo del servidor) y `tsdav` (2.5.0 exacta, MIT, aprobada en la spec 018 con la enmienda 6; solo se importa en `src/lib/sync/providers/icloud.ts`). `no-secrets.test.ts` comprueba las dos. El `package.json` no debe crecer sin aprobación.
 
 ## 5. Estructura del repositorio
 
@@ -268,7 +277,7 @@ Dependencias de producción: `next`, `react`, `react-dom`, `@supabase/supabase-j
 │   │   ├── recurrence/        # spec 013: repeat-field, recurrence-editor, series-scope-dialog, series-delete
 │   │   ├── comments/          # spec 014: event-comments (sección con sondeo), comment-item, comment-text, comment-form, comments-skeleton
 │   │   ├── images/            # spec 012: image-picker, upload-list, use-image-uploads (cola de subidas), image-uploader (detalle), event-images (galería), image-viewer (visor), use-image-blob
-│   │   ├── connections/       # spec 007: connection-list, provider-notice, calendar-picker, sync-status, sync-now-button, disconnect-dialog
+│   │   ├── connections/       # spec 007: connection-list, provider-notice, calendar-picker, sync-status, sync-now-button, disconnect-dialog; spec 018: icloud-notice, icloud-connect-form
 │   │   └── pwa/               # service-worker-register, retry-button, ios-install-hint
 │   ├── lib/
 │   │   ├── auth/              # schemas.ts (zod), error-messages.ts, form-state.ts, route-access.ts, next-path.ts (destino tras login: solo /invite/<token>)
@@ -291,7 +300,7 @@ Dependencias de producción: `next`, `react`, `react-dom`, `@supabase/supabase-j
 │   └── icons/                 # icon.svg (maestro) → icon-192, icon-512, icon-512-maskable (letras al 85 %), apple-touch-icon
 ├── supabase/
 │   ├── config.toml
-│   └── migrations/            # 001: base_schema, rls_policies · 002: calendars_and_events, merge_calendars · 003: sharing_tables_and_policies, members_with_names, invite_functions, access_code_functions, fix_join_with_code · 004: import_calendar · 005: profile_accent, remove_old_blue · 006: account_orphan_schema, account_recovery_limit, delete_own_account, decide_orphan_calendar, copy_calendar_for_owner, apply_orphan_decisions, account_mail_jobs, account_notices_read, skip_test_addresses · 008: profile_last_view · 007: sync_schema, sync_readonly, sync_connect_functions, sync_worker_functions, calendar_groups · 009: sync_write_schema, sync_write_functions, sync_apply_events_v2 · 010: rename_cafam · 011: profile_theme · 012: event_images, event_images_functions, event_images_storage, event_images_purge_claim, copy_calendar_images(_fix), images_purge, reserve_images_order · 013: event_series, series_reserve_images, series_rules_fast_tz, event_series_functions, series_copy_upload, materialize_occurrence · 014: event_comments, comments_copy_loss · 017: event_undo, trash_row
+│   └── migrations/            # 001: base_schema, rls_policies · 002: calendars_and_events, merge_calendars · 003: sharing_tables_and_policies, members_with_names, invite_functions, access_code_functions, fix_join_with_code · 004: import_calendar · 005: profile_accent, remove_old_blue · 006: account_orphan_schema, account_recovery_limit, delete_own_account, decide_orphan_calendar, copy_calendar_for_owner, apply_orphan_decisions, account_mail_jobs, account_notices_read, skip_test_addresses · 008: profile_last_view · 007: sync_schema, sync_readonly, sync_connect_functions, sync_worker_functions, calendar_groups · 009: sync_write_schema, sync_write_functions, sync_apply_events_v2 · 010: rename_cafam · 011: profile_theme · 012: event_images, event_images_functions, event_images_storage, event_images_purge_claim, copy_calendar_images(_fix), images_purge, reserve_images_order · 013: event_series, series_reserve_images, series_rules_fast_tz, event_series_functions, series_copy_upload, materialize_occurrence · 014: event_comments, comments_copy_loss · 017: event_undo, trash_row · 018: icloud_provider, sync_write_context_provider
 ├── tests/
 │   ├── setup-unit.ts
 │   ├── fixtures/ics/          # .ics sintéticos al estilo Google, iCloud y Outlook (nunca calendarios reales)
@@ -437,6 +446,9 @@ La decisión de acceso es una función pura, `getRouteAccess(pathname, hasSessio
   - `event_trash` (copia del evento, sus imágenes `ready` y sus comentarios, con `deleted_by`): RLS sin políticas y sin permisos para clientes; solo la tocan las funciones. Se guarda la última copia de cada usuario.
   - `snapshot_event(p_event_id, …)` (owner o editor, antes del borrado normal) y `restore_event(p_trash_id, p_event_id default null)` (solo quien borró, en el primer minuto y con el rol aún vigente; `p_event_id` cuelga imágenes y comentarios del evento recreado en Google). `trash_row(p_trash_id)` devuelve la fila guardada a quien borró. Una repetición sin fila se restaura quitando su fecha de `exdates`.
   - `images_claim_purge` deja en la cola los objetos de los últimos 2 minutos, así las imágenes sobreviven al "Deshacer". `pg_cron` `event-trash-purge` (05:00 UTC) borra las copias de más de 1 h; `trash_scheduled_jobs()` es la ayuda de tests.
+- Añadido por la spec 018 (migraciones `icloud_provider` y `sync_write_context_provider`; en dev, **pendientes en prod**):
+  - Los `check` de `provider` en `calendar_connections` y `synced_calendars` admiten `'icloud'`. `google_access` guarda también el permiso de un calendario de iCloud (no se renombra; lo explica un comentario).
+  - `sync_write_context` devuelve además `provider`. El resto de funciones de la 007 y la 009 no cambian: `connect_account` guarda en Vault la credencial de iCloud como guarda el token de Google, y `sync_claim_*` ya devolvían `provider`.
 - La evolución prevista (`calendar_invites`, `calendar_access_codes`, …) está en el Anexo A de `specs/001-base-aplicacion/plan.md`.
 
 ### PWA
@@ -636,6 +648,8 @@ npm run db:types       # regenera src/types/database.ts
 - **Un toque produce un `click` sintético después del `pointerup`:** si se abre una ventana en el `pointerup`, ese clic la cierra. Con el dedo se crea en el `click` (`SlotLayer`) y tras un arrastre se traga el clic siguiente (`use-event-drag.ts`).
 - **`touch-action`**: sin `touch-none` en el bloque levantado, el navegador desplaza y lanza `pointercancel`; la rejilla lleva `touch-pan-x touch-pan-y` para que el pellizco llegue a la app y no amplíe la página.
 - **Arneses de test de las vistas:** pasa arrays estables (fuera del render); un array nuevo en cada render reinicia los cambios optimistas del contexto y el test parece no guardar.
+- **iCloud empareja las repeticiones por la hora de pared de la serie** (spec 018): `ical.js` no relaciona un `RECURRENCE-ID` o `EXDATE` en UTC con una serie en `TZID` sin `VTIMEZONE`. Por eso `icloud-ics.ts` los escribe con la misma `TZID` que el `DTSTART` de la serie. El `external_id` sí va en UTC.
+- **El aviso `sync_revoked` solo guarda el correo de la cuenta**: con el mismo correo en Google y como Apple ID, `getNotices` elige la conexión en `needs_reauth`.
 - **Parar `next start` en segundo plano:** detener la tarea no mata el proceso de Node y el puerto 3100 queda ocupado; mata el PID que escucha en él (`netstat -ano | grep :3100`).
 
 ## 11. Fuera de alcance hasta su spec
@@ -655,5 +669,6 @@ La **007 (sincronización de Google, solo lectura, y grupos)** y la **009 (sincr
 - La **013 (eventos recurrentes)** está cerrada (2026-10-31), con sus 6 migraciones aplicadas en prod.
 - La **014 (comentarios)** está cerrada (2026-11-01), con sus 2 migraciones aplicadas en prod.
 - La **017 (mover eventos, menú y "Deshacer")** está cerrada (2026-11-01), con sus 2 migraciones aplicadas en prod. Al soltar, cambiar el color o borrar una repetición se pregunta el alcance; "Deshacer" solo con "Solo este evento".
-- **Siguiente:** 015 (asistente de chat), con su plan y sus tareas aprobados. Las specs de la 011 a la 015 están aprobadas desde el 2026-10-29.
+- La **018 (iCloud)** está implementada en la rama `018-sincronizacion-icloud` (T2–T14). Falta: que el usuario ejecute la comprobación con una cuenta real (`node specs/018-sincronizacion-icloud/icloud-check.mjs`, T1) y se anote su salida en el plan; aplicar sus 2 migraciones en prod; integrar en `main`; y la demo en el iPhone para cerrarla (T15). Si la T1 dice que iCloud no deja renombrar (g), hay que deshabilitar el nombre de los calendarios de iCloud (plan D14).
+- **Siguiente:** cerrar la 018 y después la 015 (asistente de chat), con su plan y sus tareas aprobados. Las specs de la 011 a la 015 están aprobadas desde el 2026-10-29.
 - Los usuarios de prueba usan `@cafam.test`. Los antiguos del dominio anterior se borraron de dev en la spec 010 (T5), con permiso del usuario.

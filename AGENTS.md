@@ -12,7 +12,7 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 Contexto completo del proyecto para cualquier IA que empiece a trabajar en él. Léelo entero antes de tocar código. El bloque de arriba lo gestiona `next dev`: no lo edites; todo lo de debajo es documentación del proyecto y `next dev` lo respeta.
 
-> Última actualización: 2026-11-01, al cerrar la spec 014 (comentarios); sus 2 migraciones están en dev y faltan en prod hasta el merge.
+> Última actualización: 2026-11-01, al cerrar la spec 014 (comentarios), con sus 2 migraciones aplicadas en prod.
 
 ## 1. Qué es
 
@@ -41,7 +41,7 @@ Contexto completo del proyecto para cualquier IA que empiece a trabajar en él. 
 | 011-rediseno-visual | Modo oscuro con selector, transparencias (glassmorphism), animaciones, microinteracciones y transiciones entre vistas | **Cerrada** (2026-10-30), T1–T13 hechas; migración `profile_theme` aplicada en prod |
 | 012-imagenes-en-eventos | Imágenes en los eventos con Supabase Storage, también de Lectores y en calendarios traídos de Google | **Cerrada** (2026-10-30), T1–T13 hechas; migraciones aplicadas en prod |
 | 013-eventos-recurrentes | Eventos repetidos con reglas personalizables y edición de una repetición, de las siguientes o de toda la serie | **Cerrada** (2026-10-31), T1–T16 hechas; 6 migraciones aplicadas en prod |
-| 014-comentarios-en-eventos | Comentarios en los eventos por cualquier miembro, Lectores incluidos | **Cerrada** (2026-11-01), T1–T11 hechas; 2 migraciones en dev, **pendientes en prod** |
+| 014-comentarios-en-eventos | Comentarios en los eventos por cualquier miembro, Lectores incluidos | **Cerrada** (2026-11-01), T1–T11 hechas; 2 migraciones aplicadas en prod |
 | 015-asistente-de-chat | Asistente de chat sobre los eventos y la disponibilidad común, con un proveedor LLM gratuito (no Gemini) | **Spec aprobada** (2026-10-29), sin plan |
 | 016-calendario-estilo-google | Calendario como Google Calendar en el móvil: bloques rellenos, cabecera con cajón y "+", deslizar, agenda continua y fila de meses (enmienda 4 de la constitución) | **Cerrada** (2026-10-30), T1–T13 hechas; sin migraciones. La prueba en el iPhone se hace en producción |
 | 017-mover-eventos-y-menu | Mover y redimensionar arrastrando, menú contextual en el ordenador, "Deshacer" en los avisos, detalle en hoja inferior en el móvil, pellizcar para ampliar y atajos nuevos (enmienda 5) | **Spec aprobada** (2026-10-30), sin plan; va después de la 016 |
@@ -154,7 +154,7 @@ Añadido por la spec 013 (en producción desde el 2026-10-31):
 - **Duplicar** una repetición crea un evento suelto en su fecha. Juntar, copiar calendarios sin propietario y subir a Google conservan o convierten las series (subir: cada repetición de la ventana como evento suelto, con aviso).
 - Límites: 500 series por calendario y 100 excepciones (contando las fechas borradas) por serie.
 
-Añadido por la spec 014 (cerrada el 2026-11-01; migraciones en dev, pendientes en prod):
+Añadido por la spec 014 (en producción desde el 2026-11-01):
 
 - **Sección "Comentarios"** al final del detalle (`EventComments` en `EventPanel`, ventana y página completa): cualquier miembro, Lectores incluidos y también en calendarios traídos (nunca se envían a Google), escribe con "Comentar" (Ctrl/⌘+Intro también). Se cargan **después** de abrir el detalle, con su esqueleto: los 50 más recientes en orden cronológico y "Ver anteriores".
 - Cada comentario: avatar, nombre ("un antiguo miembro" o "Cuenta borrada" como el autor del evento), fecha relativa ("hace 5 min", "ayer a las 18:30") con la completa para lectores de pantalla, "(editado)" y texto plano con saltos de línea; solo los `https://` son enlaces (`linkify`, nunca HTML). De 1 a 1.000 caracteres sin los espacios de los extremos.
@@ -414,7 +414,7 @@ La decisión de acceso es una función pura, `getRouteAccess(pathname, hasSessio
   - Funciones `SECURITY INVOKER` (bloquean la serie con `for update`, así que un Lector recibe `CF404`): `update_occurrence`, `split_series`, `update_series` (con `"recurrence": null` en los campos convierte la serie en suelto), `delete_occurrences` y `series_loss` (excepciones e imágenes que se perderían). La regla truncada y los argumentos los calcula TypeScript (`planSeriesChange`, `planSeriesDelete`): SQL no expande reglas.
   - `materialize_occurrence(p_secret, p_series_id, p_original_start)`: `SECURITY DEFINER` para cualquier miembro, idempotente, con el secreto de Vault como las escrituras de la 009, porque la acción comprueba antes con `ical.js` que la fecha es una repetición.
   - `copy_calendar_for_owner` copia series y excepciones; `sync_attach_uploaded` v2 recibe en `p_mapping` `{event_id, external_id}` o `{series_id, starts_at, ends_at, external_id}`, suelta las excepciones y borra las series. `merge_calendars` no cambia.
-- Añadido por la spec 014 (migraciones `event_comments` y `comments_copy_loss`; en dev, **pendientes en prod**):
+- Añadido por la spec 014 (migraciones `event_comments` y `comments_copy_loss`; en dev y en prod):
   - `event_comments (id, event_id → events on delete cascade, author_id → profiles on delete set null default auth.uid(), client_id, body 1..1000, created_at, edited_at)`, `unique (author_id, client_id)` (un doble envío se guarda una vez). RLS: leen los miembros del calendario del evento; insertan los miembros como autores; actualiza el autor; borran el autor o `calendar_role_for = 'owner'`. Permisos por columna: `insert (event_id, body, client_id)` y `update (body)`.
   - Trigger `event_comments_rules`: recorta los extremos (`\s`), pone `edited_at` al cambiar el texto y da `22023` en la fila de una serie.
   - `copy_calendar_for_owner` copia los comentarios; `series_loss` devuelve también `comments` (se borró y se creó de nuevo por el cambio de tipo).
@@ -627,6 +627,6 @@ La **007 (sincronización de Google, solo lectura, y grupos)** y la **009 (sincr
 - La **012 (imágenes)** está cerrada y en producción (2026-10-30), con sus 8 migraciones aplicadas en prod.
 - La **016 (calendario al estilo Google)** está cerrada (2026-10-30). Las previews de Vercel están protegidas con su inicio de sesión: para verlas en el móvil hay que entrar en Vercel o usar "Share".
 - La **013 (eventos recurrentes)** está cerrada (2026-10-31), con sus 6 migraciones aplicadas en prod.
-- La **014 (comentarios)** está cerrada (2026-11-01); falta que el usuario aplique sus 2 migraciones en prod (`npx supabase link --project-ref yznbdoskvtxeasujtirk`, `npx supabase db push`, volver a enlazar dev) antes del merge a `main`.
+- La **014 (comentarios)** está cerrada (2026-11-01), con sus 2 migraciones aplicadas en prod.
 - **Siguiente:** por orden y cada una con su plan y sus tareas aprobados: 017 (mover arrastrando, menú y "Deshacer"; spec aprobada, enmienda 5 ya en la constitución; tendrá que decidir el alcance al soltar una repetición) y 015 (asistente de chat). Las specs de la 011 a la 015 están aprobadas desde el 2026-10-29.
 - Los usuarios de prueba usan `@cafam.test`. Los antiguos del dominio anterior se borraron de dev en la spec 010 (T5), con permiso del usuario.

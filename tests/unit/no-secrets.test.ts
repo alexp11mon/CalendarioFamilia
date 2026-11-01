@@ -106,12 +106,16 @@ describe("spec 007 secrets (T14)", () => {
 
 // Spec 013, T5: ical.js stays on the server (plan R7).
 describe("spec 013 recurrence expansion (T5)", () => {
-  it("ical.js is imported only by the .ics parser and the expansion", () => {
+  it("ical.js is imported only by the .ics parser, the expansion and iCloud's .ics (spec 018)", () => {
     expect(
       FILES.filter(({ content }) => /from\s+["']ical\.js["']/.test(content))
         .map((f) => f.path)
         .sort(),
-    ).toEqual(["lib/ics/parse-ics.ts", "lib/recurrence/expand.ts"]);
+    ).toEqual([
+      "lib/ics/parse-ics.ts",
+      "lib/recurrence/expand.ts",
+      "lib/sync/icloud-ics.ts",
+    ]);
   });
 
   it("no client component imports the expansion", () => {

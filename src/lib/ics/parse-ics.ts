@@ -52,14 +52,14 @@ export interface ParseIcsOptions {
   cap?: number;
 }
 
-function isCancelled(component: ICAL.Component): boolean {
+export function isCancelled(component: ICAL.Component): boolean {
   const status = component.getFirstPropertyValue("status");
   return typeof status === "string" && status.toUpperCase() === "CANCELLED";
 }
 
-function zoneOf(
+export function zoneOf(
   component: ICAL.Component,
-  name: "dtstart" | "dtend",
+  name: "dtstart" | "dtend" | "recurrence-id",
 ): IcsZone | undefined {
   const property = component.getFirstProperty(name);
   if (!property) return undefined;
@@ -76,7 +76,7 @@ function zoneOf(
   return { kind: "floating" };
 }
 
-function toTime(time: ICAL.Time, zone: IcsZone): IcsTime {
+export function toTime(time: ICAL.Time, zone: IcsZone): IcsTime {
   return {
     year: time.year,
     month: time.month,
@@ -90,7 +90,7 @@ function toTime(time: ICAL.Time, zone: IcsZone): IcsTime {
   };
 }
 
-function occurrenceOf(
+export function occurrenceOf(
   component: ICAL.Component,
   start: ICAL.Time,
   end: ICAL.Time,

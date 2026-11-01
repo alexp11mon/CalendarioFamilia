@@ -56,7 +56,10 @@ export function limit(text: string, max: number): string {
 }
 
 /** The instant of a timed value, or null if its zone is not known (RF-21). */
-function instantOf(time: IcsTime, profileTimeZone: string): number | null {
+export function instantOf(
+  time: IcsTime,
+  profileTimeZone: string,
+): number | null {
   const wall = {
     year: time.year,
     month: time.month,

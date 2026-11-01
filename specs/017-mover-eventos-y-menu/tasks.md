@@ -164,7 +164,7 @@
   Hecho cuando: `npm test -- zoom use-grid-zoom time-grid` en verde y prueba con emulación táctil a 390 px y con Ctrl + rueda a 1440 px, recargando para ver la altura recordada. Cubre: RF-49, RF-50, RF-51, RF-52, RF-53 | Módulo: grid-zoom
   Evidencia (2026-11-01): `zoom.ts` (24–144 px, `scrollForZoom`, `wheelZoom`) y `use-grid-zoom.ts` (pellizco con dos punteros y Ctrl + rueda no pasiva sobre `TimeGrid`; altura en `localStorage` `cafam-hour-px` leída con `useSyncExternalStore`, 48 si falla; el desplazamiento se ajusta en `useLayoutEffect` para dejar fija la hora bajo el gesto); `TimeGrid` usa esa altura y la rejilla lleva `touch-pan-x touch-pan-y`. Arreglados dos fallos de `SlotLayer` con el dedo: con `touch-action` un pellizco ya no da `pointercancel` y el primer dedo creaba un evento (ahora un segundo dedo o moverse más de 8 px anulan el toque), y la ventana rápida abierta en el `pointerup` se cerraba con el `click` que sigue al toque (ya pasaba antes de la 017; ahora el toque abre en su `click`). Tests en rojo antes de implementar: `zoom` (4), `use-grid-zoom` (5) y 2 casos en `slot-layer`; `npm test -- zoom use-grid-zoom time-grid slot-layer` en verde, `npm test` completo en verde; typecheck, format y build correctos, lint con los 2 avisos previos. `playwright-cli`: a 1440 px Ctrl + rueda pasa de 48 a 99 px con el minuto bajo el puntero fijo (670 → 670) y se recuerda al recargar; a 390 px con contexto táctil (CDP) un pellizco pasa de 48 a 96 px sin ampliar la página ni abrir la ventana rápida, se recuerda al recargar, y un toque en un hueco abre la ventana rápida.
 
-- [ ] T16 Validar la spec y documentarla
+- [x] T16 Validar la spec y documentarla
   Pasos:
   - Tabla de evidencias RF-1 a RF-64 y casos límite (test o prueba manual de cada uno).
   - Prueba en un iPhone real (o su emulación táctil) de mantener pulsado, arrastrar, redimensionar, la hoja inferior y el pellizco; en el escritorio, el ratón, el menú y los atajos.
@@ -211,7 +211,9 @@ Capturas: 12 a 390, 768 y 1440 px, en claro y oscuro, con el acento rojo y el am
 
 Verificación (P8): typecheck, format y build correctos; lint sin errores (los 2 avisos previos); `npm test` con 206 ficheros y 1969 tests en verde. `npm run test:db`: 36 ficheros en verde y 4 caídos por `Request rate limit reached` de Auth en los `beforeAll` (trampa conocida); repetidos con `--no-file-parallelism`, 4 ficheros y 17 tests en verde. Usuario de prueba `t7-drag@cafam.test` borrado de dev. Migraciones `event_undo` y `trash_row` aplicadas en prod con `supabase db push` (2026-11-01).
 
-**No hecho:** la prueba con un calendario traído de Google real (dev, puerto 3000, OAuth). Necesita conectar una cuenta de Google del usuario. La escritura en Google está cubierta solo por tests con el motor simulado (`quick-actions`, `write-event`).
+Cierre: el usuario aprobó cerrar la spec el 2026-11-01, tras desplegarla en producción. La prueba con Google y en el iPhone quedó a su cargo en producción.
+
+**No hecho por el agente:** la prueba con un calendario traído de Google real (dev, puerto 3000, OAuth). Necesita conectar una cuenta de Google del usuario. La escritura en Google está cubierta solo por tests con el motor simulado (`quick-actions`, `write-event`).
 
 **Tests escritos con el código, sin rojo separado:** T4, T6 y T10.
 

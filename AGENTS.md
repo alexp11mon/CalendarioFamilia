@@ -12,7 +12,7 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 Contexto completo del proyecto para cualquier IA que empiece a trabajar en él. Léelo entero antes de tocar código. El bloque de arriba lo gestiona `next dev`: no lo edites; todo lo de debajo es documentación del proyecto y `next dev` lo respeta.
 
-> Última actualización: 2026-11-01, al implementar la spec 017 (mover eventos, menú y "Deshacer"), pendiente de cerrar; sus 2 migraciones ya están aplicadas en prod.
+> Última actualización: 2026-11-01, al cerrar la spec 017 (mover eventos, menú y "Deshacer"), con sus 2 migraciones aplicadas en prod.
 
 ## 1. Qué es
 
@@ -44,7 +44,7 @@ Contexto completo del proyecto para cualquier IA que empiece a trabajar en él. 
 | 014-comentarios-en-eventos | Comentarios en los eventos por cualquier miembro, Lectores incluidos | **Cerrada** (2026-11-01), T1–T11 hechas; 2 migraciones aplicadas en prod |
 | 015-asistente-de-chat | Asistente de chat sobre los eventos y la disponibilidad común, con un proveedor LLM gratuito (no Gemini) | **Spec aprobada** (2026-10-29), sin plan |
 | 016-calendario-estilo-google | Calendario como Google Calendar en el móvil: bloques rellenos, cabecera con cajón y "+", deslizar, agenda continua y fila de meses (enmienda 4 de la constitución) | **Cerrada** (2026-10-30), T1–T13 hechas; sin migraciones. La prueba en el iPhone se hace en producción |
-| 017-mover-eventos-y-menu | Mover y redimensionar arrastrando, menú contextual en el ordenador, "Deshacer" en los avisos, detalle en hoja inferior en el móvil, pellizcar para ampliar y atajos nuevos (enmienda 5) | **Implementada** (2026-11-01), T1–T15 hechas; T16 pendiente de la prueba con Google y de la aprobación; 2 migraciones aplicadas en prod |
+| 017-mover-eventos-y-menu | Mover y redimensionar arrastrando, menú contextual en el ordenador, "Deshacer" en los avisos, detalle en hoja inferior en el móvil, pellizcar para ampliar y atajos nuevos (enmienda 5) | **Cerrada** (2026-11-01), T1–T16 hechas; 2 migraciones aplicadas en prod |
 
 Las specs 001–004 (cerradas, no se editan) citan la gestión de cuenta como "spec 005" y OAuth como "spec 006": hoy son la 006 y la 007.
 
@@ -164,7 +164,7 @@ Añadido por la spec 014 (en producción desde el 2026-11-01):
 - **Repeticiones**: comentar una repetición sin fila la materializa (`materialize_occurrence`); cada repetición tiene los suyos. El aviso de pérdidas de la 013 los cuenta ("Se perderán 2 cambios, 3 imágenes y 4 comentarios.").
 - Borrar el evento (también desde la sincronización) los borra; moverlo y juntar calendarios los conservan; las copias de calendarios sin propietario los copian; duplicar no los copia.
 
-Añadido por la spec 017 (implementada el 2026-11-01, sin cerrar):
+Añadido por la spec 017 (en producción desde el 2026-11-01):
 
 - **Mover y redimensionar con el ratón** en semana y día (`DraggableEvent` y `use-event-drag.ts`): se levanta a los 4 px, se mueve en cuartos de hora conservando la duración, cambia de día, muestra las horas nuevas y se autodesplaza cerca del borde. El borde inferior cambia el fin (como mínimo 15 min; sin tirador si cruza la medianoche). Escape o soltar en el mismo sitio o fuera no guardan, y el clic que sigue a un arrastre no abre el evento. Solo en los eventos que se pueden escribir (`canWriteEvents`); en los demás el bloque es un enlace normal.
 - **Franja de día completo** siempre visible en semana y día: soltar ahí un evento con hora lo pasa a día completo, y un día completo de un solo día soltado en la rejilla dura 1 h desde ese punto. En el **mes** se mueve de día conservando la hora y la duración.
@@ -653,6 +653,6 @@ La **007 (sincronización de Google, solo lectura, y grupos)** y la **009 (sincr
 - La **016 (calendario al estilo Google)** está cerrada (2026-10-30). Las previews de Vercel están protegidas con su inicio de sesión: para verlas en el móvil hay que entrar en Vercel o usar "Share".
 - La **013 (eventos recurrentes)** está cerrada (2026-10-31), con sus 6 migraciones aplicadas en prod.
 - La **014 (comentarios)** está cerrada (2026-11-01), con sus 2 migraciones aplicadas en prod.
-- La **017 (mover eventos, menú y "Deshacer")** está implementada (2026-11-01, T1–T15) en la rama `017-mover-eventos-y-menu`. Falta T16: la prueba con un calendario traído de Google real, y la aprobación del usuario para cerrarla. Al soltar, cambiar el color o borrar una repetición se pregunta el alcance; "Deshacer" solo con "Solo este evento".
+- La **017 (mover eventos, menú y "Deshacer")** está cerrada (2026-11-01), con sus 2 migraciones aplicadas en prod. Al soltar, cambiar el color o borrar una repetición se pregunta el alcance; "Deshacer" solo con "Solo este evento".
 - **Siguiente:** 015 (asistente de chat), con su plan y sus tareas aprobados. Las specs de la 011 a la 015 están aprobadas desde el 2026-10-29.
 - Los usuarios de prueba usan `@cafam.test`. Los antiguos del dominio anterior se borraron de dev en la spec 010 (T5), con permiso del usuario.

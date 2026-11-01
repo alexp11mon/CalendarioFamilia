@@ -34,7 +34,7 @@ export function DraggableEvent({
         onPointerDown: (pointer) => api.startDrag(event, pointer, { mode }),
       }}
     >
-      {lifted && !event.allDay ? (
+      {lifted && mode === "grid" && !event.allDay ? (
         // The new hours on the block itself (RF-8).
         <span aria-hidden="true" className="block font-semibold tabular-nums">
           {formatTime(event.startsAt, timeZone)} –{" "}

@@ -8,7 +8,7 @@ import { fitWeek, layoutMonthWeek } from "@/lib/calendar/month-lanes";
 import { boxOf, type Box } from "@/lib/calendar/popover";
 import { calendarHref } from "@/lib/calendar/ranges";
 import { weekdayIndex } from "@/lib/calendar/time-zone";
-import { EventBlock } from "./event-block";
+import { DraggableEvent } from "./draggable-event";
 
 const INITIALS = ["L", "M", "X", "J", "V", "S", "D"];
 // A lane is an 18 px block and a 2 px gap (EventBlock "line", gap-y-0.5).
@@ -138,8 +138,9 @@ export function MonthView({
               className="pointer-events-none absolute inset-x-0 top-8 bottom-0.5 grid auto-rows-[18px] grid-cols-7 content-start gap-y-0.5 overflow-hidden"
             >
               {week.visible.map(({ event, start, span, lane }) => (
-                <EventBlock
+                <DraggableEvent
                   key={event.id}
+                  mode="month"
                   event={event}
                   timeZone={timeZone}
                   shape="line"

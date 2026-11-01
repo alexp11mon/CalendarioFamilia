@@ -1,9 +1,25 @@
-import { render, screen, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import {
+  EventInteractionsProvider,
+  useEventInteractionsState,
+} from "@/components/calendar/event-interactions";
 import { MonthView } from "@/components/calendar/month-view";
+import { ToastProvider } from "@/components/ui/toast";
 import type { CalendarEventItem } from "@/lib/calendar/layout";
 import { getVisibleRange } from "@/lib/calendar/ranges";
+
+const h = vi.hoisted(() => ({ quickChange: vi.fn() }));
+
+vi.mock("@/app/dashboard/events/quick-actions", () => ({
+  quickChange: h.quickChange,
+  deleteForUndo: vi.fn(),
+  undoAction: vi.fn(),
+}));
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ refresh: vi.fn() }),
+}));
 
 const TZ = "Europe/Madrid";
 const TODAY = "2026-10-21";
@@ -284,5 +300,126 @@ describe("MonthView: creating", () => {
       />,
     );
     expect(within(cell).getByText("Cena")).toBeVisible();
+  });
+});
+
+// Spec 017, T9: moving events to another day of the month (RF-16, RF-17).
+describe("MonthView dragging", () => {
+  // 10:00–11:00 in Madrid on the 21st (UTC+2 in October).
+  const DINNER = event("Cena", "2026-10-21T08:00:00Z", "2026-10-21T09:00:00Z", {
+    calendarId: "mine",
+  });
+  const TRIP = event("Viaje", "2026-10-13T00:00:00Z", "2026-10-16T00:00:00Z", {
+    allDay: true,
+    calendarId: "mine",
+  });
+  const THEIRS = event("Ajeno", "2026-10-22T08:00:00Z", "2026-10-22T09:00:00Z");
+  const EVENTS = [DINNER, TRIP, THEIRS];
+  const EDITABLE = new Set(["mine"]);
+  const COLORS = new Map<string, string>();
+
+  function Harness() {
+    const state = useEventInteractionsState({
+      events: EVENTS,
+      editableCalendarIds: EDITABLE,
+      calendarColors: COLORS,
+      timeZone: TZ,
+    });
+    return (
+      <EventInteractionsProvider value={state.api}>
+        <MonthView
+          date="2026-10-21"
+          days={DAYS}
+          events={state.events}
+          timeZone={TZ}
+          today={TODAY}
+          onCreate={vi.fn()}
+        />
+        {state.dialog}
+      </EventInteractionsProvider>
+    );
+  }
+
+  // Each cell is 100 × 100 px: column by x, week by y.
+  const point = (date: string) => {
+    const index = DAYS.indexOf(date);
+    return {
+      clientX: (index % 7) * 100 + 50,
+      clientY: Math.floor(index / 7) * 100 + 50,
+    };
+  };
+
+  function setup() {
+    h.quickChange.mockReset();
+    h.quickChange.mockResolvedValue({ ok: true, id: "x" });
+    render(
+      <ToastProvider>
+        <Harness />
+      </ToastProvider>,
+    );
+    document.elementsFromPoint = (x: number, y: number) => {
+      const day = DAYS[Math.floor(y / 100) * 7 + Math.floor(x / 100)];
+      return day ? [cell(day)] : [];
+    };
+  }
+
+  async function drag(title: string, from: string, to: string) {
+    const link = screen.getByRole("link", { name: new RegExp(title) });
+    fireEvent.pointerDown(link, {
+      ...point(from),
+      button: 0,
+      pointerId: 1,
+      pointerType: "mouse",
+    });
+    fireEvent.pointerMove(window, { ...point(to), pointerId: 1 });
+    await act(async () => {
+      fireEvent.pointerUp(window, { ...point(to), pointerId: 1 });
+    });
+  }
+
+  it("a timed event keeps its hour and duration on another day (RF-16)", async () => {
+    setup();
+    await drag("Cena", "2026-10-21", "2026-10-29");
+    expect(h.quickChange).toHaveBeenCalledWith(
+      DINNER.id,
+      {
+        kind: "times",
+        // Madrid changes to UTC+1 on the 25th: the same 10:00 on the wall.
+        startsAt: "2026-10-29T09:00:00.000Z",
+        endsAt: "2026-10-29T10:00:00.000Z",
+        allDay: false,
+      },
+      {},
+    );
+  });
+
+  it("an event of several days moves its first day and keeps its days (RF-17)", async () => {
+    setup();
+    await drag("Viaje", "2026-10-14", "2026-10-20");
+    expect(h.quickChange).toHaveBeenCalledWith(
+      TRIP.id,
+      {
+        kind: "times",
+        startsAt: "2026-10-20T00:00:00.000Z",
+        endsAt: "2026-10-23T00:00:00.000Z",
+        allDay: true,
+      },
+      {},
+    );
+  });
+
+  it("an event the user cannot write to does not lift", async () => {
+    setup();
+    await drag("Ajeno", "2026-10-22", "2026-10-28");
+    expect(h.quickChange).not.toHaveBeenCalled();
+  });
+
+  it("the empty space still creates and +N still opens the day", async () => {
+    setup();
+    expect(
+      screen.getByRole("button", { name: /Crear evento el .*21 de octubre/ }),
+    ).toBeVisible();
+    await drag("Cena", "2026-10-21", "2026-10-21");
+    expect(h.quickChange).not.toHaveBeenCalled();
   });
 });

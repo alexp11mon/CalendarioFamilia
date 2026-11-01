@@ -96,6 +96,30 @@ describe("MiniMonth dots (RF-24)", () => {
     );
   });
 
+  it("follows fresh marks of its month after a change (spec 017)", () => {
+    const props = {
+      month: "2026-10",
+      today: "2026-10-22",
+      view: "agenda" as const,
+      colors: COLORS,
+      visibleCalendarIds: new Set(["home"]),
+      loadMonthMarks: vi.fn<Load>(),
+    };
+    const { rerender } = render(
+      <MiniMonth {...props} initialMarks={{ "2026-10-13": ["home"] }} />,
+    );
+    rerender(
+      <MiniMonth {...props} initialMarks={{ "2026-10-20": ["home"] }} />,
+    );
+
+    expect(
+      dayLink(/^martes, 13 de octubre/).querySelectorAll("[data-dot]"),
+    ).toHaveLength(0);
+    expect(
+      dayLink(/^martes, 20 de octubre/).querySelectorAll("[data-dot]"),
+    ).toHaveLength(1);
+  });
+
   it("draws no dot for a hidden calendar", () => {
     renderMini({ marks: { "2026-10-14": ["home"] }, visible: ["work"] });
 

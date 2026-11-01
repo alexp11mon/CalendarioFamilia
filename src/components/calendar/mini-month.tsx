@@ -91,7 +91,11 @@ export function MiniMonth({
     setMonth(next);
   }
 
-  const marks = visibleMarks(cache[month] ?? {}, visibleCalendarIds);
+  // The shown month follows the server's refresh after a change (spec 017).
+  const marks = visibleMarks(
+    (month === initialMonth ? initialMarks : cache[month]) ?? {},
+    visibleCalendarIds,
+  );
   const days = gridDays(month);
   const weeks = Array.from({ length: days.length / 7 }, (_, index) =>
     days.slice(index * 7, index * 7 + 7),

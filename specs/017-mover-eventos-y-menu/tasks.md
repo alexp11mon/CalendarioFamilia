@@ -106,12 +106,13 @@
   Hecho cuando: `npm test -- draggable-event time-grid` en verde y prueba en `playwright-cli` a 1440 px de las tres conversiones. Cubre: RF-13, RF-14, RF-15 | Módulo: drag-hook
   Evidencia (2026-11-01): Bloques de la franja como `DraggableEvent` (modo `strip`) y celdas `data-allday-day` detrás de ellos. La franja se muestra siempre, también vacía (como Google): mostrarla solo al arrastrar empujaba la rejilla 24 px bajo el puntero. 4 casos nuevos en `draggable-event` en rojo y después en verde; `npm test -- draggable-event time-grid` 21 en verde, `npm test` completo 1905 en verde; typecheck, format y build correctos, lint con los 2 avisos previos. `playwright-cli` a 1440 px: con hora → franja del jueves (día completo), día completo de un día → rejilla del viernes (1 h), "Viaje" de 2 días movido dos días conservando su duración, y en la rejilla no se convierte; persiste al recargar.
 
-- [ ] T9 Mover eventos de día en la vista mes
+- [x] T9 Mover eventos de día en la vista mes
   Pasos:
   - Primero, `month-view.test.tsx` en rojo: arrastrar un evento con hora a otro día conserva su hora y duración; uno de varios días mueve su primer día y conserva cuántos días dura; el "+N" y los huecos siguen funcionando; un evento no editable no se levanta.
   - Después, `DraggableEvent` en `MonthView` con las celdas `data-day`.
 
   Hecho cuando: `npm test -- month-view draggable-event` en verde y prueba en `playwright-cli` a 1440 px. Cubre: RF-16, RF-17 | Módulo: drag-hook
+  Evidencia (2026-11-01): `DraggableEvent` (modo `month`) en `MonthView`; las horas sobre el bloque solo en la rejilla. 4 casos nuevos en `month-view` (2 en rojo antes de implementar). Arreglado de paso un fallo previo que el arrastre deja a la vista: `MiniMonth` solo leía las marcas iniciales al montarse y no seguía `router.refresh()` (test nuevo en `mini-month`, en rojo sin el arreglo). `npm test -- month-view draggable-event mini-month` en verde, `npm test` completo 1910 en verde; typecheck, format y build correctos, lint con los 2 avisos previos. `playwright-cli` a 1440 px: un evento con hora del 6 al 12 de noviembre conserva su hora (13:00 en la semana) y "Viaje" de 2 días pasa del 5 al 17 conservando 2 días; captura del arrastre.
 
 - [ ] T10 Levantar eventos con el dedo
   Pasos:

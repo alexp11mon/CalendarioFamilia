@@ -27,6 +27,8 @@ const FLOATING = new Set([
   "src/components/calendar/confirm-dialog.tsx",
   "src/components/calendar/draggable-event.tsx",
   "src/components/calendar/event-menu.tsx",
+  "src/components/calendar/go-to-date-dialog.tsx",
+  "src/components/calendar/shortcuts-help.tsx",
   "src/components/calendar/event-modal.tsx",
   "src/components/calendar/fab.tsx",
   "src/components/calendar/merge-form.tsx",

@@ -140,12 +140,13 @@
 
 ### Iteración 2
 
-- [ ] T13 Añadir los atajos E, G y ? con su ayuda
+- [x] T13 Añadir los atajos E, G y ? con su ayuda
   Pasos:
   - Primero, en rojo: `shortcuts.test.ts` (la tabla `SHORTCUTS` con todas las teclas; G y ? como atajos; E, Supr y Ctrl+C solo en el detalle), `go-to-date-dialog.test.tsx` (G abre el diálogo, una fecha válida lleva la vista actual a ella, una inválida muestra el error, Escape cierra), `shortcuts-help.test.tsx` (? abre la lista sacada de la tabla) y `event-panel.test.tsx` (E con el detalle abierto pasa a la edición; Supr borra con "Deshacer"; Ctrl+C copia).
   - Después, la tabla, `GoToDateDialog`, `ShortcutsHelp` y las teclas del detalle.
 
   Hecho cuando: `npm test -- shortcuts go-to-date-dialog shortcuts-help event-panel use-calendar-shortcuts` en verde y capturas de los dos diálogos a 390 y 1440 px. Cubre: RF-54, RF-55, RF-56, RF-57, RF-62, RF-63 | Módulo: event-keys
+  Evidencia (2026-11-01): Tabla `SHORTCUTS` en `shortcuts.ts` (la detección construye sus teclas con ella y la ayuda la lista); G abre `GoToDateDialog` y ? abre `ShortcutsHelp`, montados por `CalendarWorkspace` (cada diálogo solo se cierra a sí mismo: el evento `close` llega después y cerraba el siguiente al pulsar G y luego ?); E, Supr/Retroceso (pulsa el botón de borrar, también el de la serie) y Ctrl/⌘+C en `EventPanel`, nunca escribiendo ni con otra ventana encima. `targetAt` tolera la falta de `elementsFromPoint`. Tests en rojo antes de implementar: `shortcuts`, `go-to-date-dialog`, `shortcuts-help` y `event-panel`; `npm test -- shortcuts go-to-date-dialog shortcuts-help event-panel use-calendar-shortcuts` 47 en verde; `npm test` completo 1947 en verde; typecheck, format y build correctos, lint con los 2 avisos previos. Capturas de los dos diálogos a 390 y 1440 px; en `playwright-cli`, G con 10/03/2027 lleva la semana a esa fecha y E en el detalle abre la edición.
 
 - [ ] T14 Abrir el detalle en una hoja inferior en el móvil
   Pasos:

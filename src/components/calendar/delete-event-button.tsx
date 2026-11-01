@@ -29,7 +29,13 @@ export function DeleteEventButton({
 
   return (
     <form action={formAction} className="contents">
-      <Button type="submit" variant="danger" disabled={pending}>
+      <Button
+        type="submit"
+        variant="danger"
+        disabled={pending}
+        // Supr in the detail presses it (spec 017 RF-55).
+        data-delete-event=""
+      >
         Borrar evento
       </Button>
       <FormAlert message={state.formError} />

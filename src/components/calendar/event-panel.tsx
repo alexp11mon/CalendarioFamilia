@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { EventComments } from "@/components/comments/event-comments";
 import { EventImages } from "@/components/images/event-images";
 import { ImageUploader } from "@/components/images/image-uploader";
@@ -20,6 +20,10 @@ import {
   type CategoryOption,
   type EventFormValues,
 } from "./event-form";
+import { isTyping } from "@/lib/calendar/shortcuts";
+import { UNDO_NOTICES } from "@/lib/calendar/undo";
+import { useToast } from "@/components/ui/toast";
+import { useEventClipboard } from "./event-clipboard";
 import { DONE_MESSAGES, useEventModal } from "./event-modal";
 import { useUndoToast } from "./use-undo-toast";
 
@@ -60,6 +64,40 @@ export function EventPanel({
   const [editing, setEditing] = useState(false);
   const router = useRouter();
   const showUndo = useUndoToast();
+  const { show } = useToast();
+  const clipboard = useEventClipboard();
+  const root = useRef<HTMLDivElement>(null);
+
+  // E, Supr and Ctrl/⌘+C with the detail open (spec 017 RF-54, RF-55,
+  // RF-57); never while typing or with another window over it (RF-63).
+  useEffect(() => {
+    if (editing) return;
+    const onKeyDown = (key: KeyboardEvent) => {
+      const panel = root.current;
+      if (!panel || key.defaultPrevented || isTyping(key.target)) return;
+      const over = [...document.querySelectorAll("dialog[open]")].some(
+        (dialog) => !dialog.contains(panel),
+      );
+      if (over || key.altKey) return;
+      const command = key.ctrlKey || key.metaKey;
+      if (command && key.key.toLowerCase() === "c") {
+        if (window.getSelection()?.toString()) return;
+        key.preventDefault();
+        clipboard?.copy(detail.id);
+        show(UNDO_NOTICES.copied);
+      } else if (command || !canEdit) {
+        return;
+      } else if (key.key.toLowerCase() === "e") {
+        key.preventDefault();
+        setEditing(true);
+      } else if (key.key === "Delete" || key.key === "Backspace") {
+        key.preventDefault();
+        panel.querySelector<HTMLButtonElement>("[data-delete-event]")?.click();
+      }
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [editing, canEdit, clipboard, detail.id, show]);
 
   if (editing) {
     return (
@@ -86,45 +124,47 @@ export function EventPanel({
   }
 
   return (
-    <EventDetail
-      event={detail}
-      timeZone={timeZone}
-      canEdit={canEdit}
-      deleteAction={deleteAction}
-      onDeleted={
-        modal?.finish ??
-        // A full page goes back to the calendar with the notice (spec 017 RF-25).
-        ((done, undo) => {
-          showUndo(DONE_MESSAGES[done], undo);
-          router.replace("/dashboard/calendar");
-        })
-      }
-      comments={<EventComments eventId={detail.id} timeZone={timeZone} />}
-      media={
-        <>
-          <EventImages
-            images={images}
-            title={detail.title}
-            timeZone={timeZone}
-          />
-          {canAttach ? <ImageUploader eventId={detail.id} /> : null}
-        </>
-      }
-      actions={
-        <>
-          <Button variant="secondary" onClick={() => setEditing(true)}>
-            Editar
-          </Button>
-          <LinkButton
-            href={`/dashboard/events/new?from=${detail.id}`}
-            // Replace: saving the copy goes back to the calendar, not to this event.
-            replace
-            variant="secondary"
-          >
-            Duplicar
-          </LinkButton>
-        </>
-      }
-    />
+    <div ref={root} className="contents">
+      <EventDetail
+        event={detail}
+        timeZone={timeZone}
+        canEdit={canEdit}
+        deleteAction={deleteAction}
+        onDeleted={
+          modal?.finish ??
+          // A full page goes back to the calendar with the notice (spec 017 RF-25).
+          ((done, undo) => {
+            showUndo(DONE_MESSAGES[done], undo);
+            router.replace("/dashboard/calendar");
+          })
+        }
+        comments={<EventComments eventId={detail.id} timeZone={timeZone} />}
+        media={
+          <>
+            <EventImages
+              images={images}
+              title={detail.title}
+              timeZone={timeZone}
+            />
+            {canAttach ? <ImageUploader eventId={detail.id} /> : null}
+          </>
+        }
+        actions={
+          <>
+            <Button variant="secondary" onClick={() => setEditing(true)}>
+              Editar
+            </Button>
+            <LinkButton
+              href={`/dashboard/events/new?from=${detail.id}`}
+              // Replace: saving the copy goes back to the calendar, not to this event.
+              replace
+              variant="secondary"
+            >
+              Duplicar
+            </LinkButton>
+          </>
+        }
+      />
+    </div>
   );
 }

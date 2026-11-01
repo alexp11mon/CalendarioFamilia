@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { shortcutFor, type KeyPress } from "@/lib/calendar/shortcuts";
+import {
+  SHORTCUTS,
+  shortcutFor,
+  type KeyPress,
+} from "@/lib/calendar/shortcuts";
 
 // Spec 008, T12: keyboard shortcuts of the calendar (RF-31, RF-36, RF-46).
 function press(key: string, extra: Partial<KeyPress> = {}): KeyPress {
@@ -31,6 +35,8 @@ describe("shortcutFor", () => {
     ["m", "month"],
     ["s", "week"],
     ["d", "day"],
+    ["g", "goto"],
+    ["?", "help"],
   ])("maps %j to %j", (key, shortcut) => {
     expect(shortcutFor(press(key), true)).toBe(shortcut);
   });
@@ -77,5 +83,25 @@ describe("shortcutFor", () => {
   it("offers no N to whoever cannot create events (RF-36)", () => {
     expect(shortcutFor(press("n"), false)).toBeNull();
     expect(shortcutFor(press("t"), false)).toBe("today");
+  });
+});
+
+// Spec 017, T13: one table for the detection and the help (RF-62, plan D16).
+describe("SHORTCUTS", () => {
+  it("lists every key with what it does", () => {
+    const keys = SHORTCUTS.map((shortcut) => shortcut.keys);
+    for (const key of ["N", "T", "A", "M", "S", "D", "G", "?", "E", "Supr"]) {
+      expect(keys.join(" ")).toContain(key);
+    }
+    expect(keys.some((key) => key.includes("Alt"))).toBe(true);
+    expect(keys.some((key) => key.includes("Ctrl"))).toBe(true);
+    for (const shortcut of SHORTCUTS) {
+      expect(shortcut.description).toMatch(/^[A-ZÁÉÍÓÚ]/);
+    }
+  });
+
+  it("detects only the calendar keys of the table: E is for the detail", () => {
+    expect(shortcutFor(press("e"), true)).toBeNull();
+    expect(shortcutFor(press("Delete"), true)).toBeNull();
   });
 });

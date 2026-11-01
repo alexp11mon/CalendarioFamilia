@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import type { EventDetailData } from "@/components/calendar/event-detail";
 import type { EventFormValues } from "@/components/calendar/event-form";
+import { EventClipboardProvider } from "@/components/calendar/event-clipboard";
 import { EventModal } from "@/components/calendar/event-modal";
 import { EventPanel } from "@/components/calendar/event-panel";
 import { ToastProvider } from "@/components/ui/toast";
@@ -85,11 +86,13 @@ function setup({
   );
   render(
     <ToastProvider>
-      {inWindow ? (
-        <EventModal title="Cena familiar">{panel}</EventModal>
-      ) : (
-        panel
-      )}
+      <EventClipboardProvider>
+        {inWindow ? (
+          <EventModal title="Cena familiar">{panel}</EventModal>
+        ) : (
+          panel
+        )}
+      </EventClipboardProvider>
     </ToastProvider>,
   );
   return { deleteAction };
@@ -180,5 +183,42 @@ describe("EventPanel", () => {
     expect(
       await screen.findByRole("heading", { name: "Comentarios" }),
     ).toBeInTheDocument();
+  });
+});
+
+// Spec 017, T13: keys of the open detail (RF-54, RF-55, RF-57, RF-63).
+describe("EventPanel keys", () => {
+  it("E opens the edit form", async () => {
+    setup({ inWindow: true });
+    await userEvent.keyboard("e");
+    expect(screen.getByLabelText("Título")).toHaveValue("Cena familiar");
+  });
+
+  it("Supr deletes it with Deshacer", async () => {
+    const { deleteAction } = setup({
+      inWindow: true,
+      deleteAction: vi.fn(async (): Promise<ConfirmState> => ({
+        done: "deleted",
+        undo: { kind: "restore", trashId: "t1" },
+      })),
+    });
+    await userEvent.keyboard("{Delete}");
+    expect(deleteAction).toHaveBeenCalled();
+    expect(await screen.findByText("Evento borrado")).toBeVisible();
+    expect(screen.getByRole("button", { name: "Deshacer" })).toBeVisible();
+  });
+
+  it("Ctrl+C copies it", async () => {
+    setup({ inWindow: true });
+    await userEvent.keyboard("{Control>}c{/Control}");
+    expect(await screen.findByText("Evento copiado")).toBeVisible();
+  });
+
+  it("a reader only copies; nothing while typing", async () => {
+    setup({ canEdit: false });
+    await userEvent.keyboard("e{Delete}");
+    expect(screen.queryByLabelText("Título")).toBeNull();
+    await userEvent.keyboard("{Control>}c{/Control}");
+    expect(await screen.findByText("Evento copiado")).toBeVisible();
   });
 });

@@ -27,12 +27,17 @@ export function useCalendarShortcuts({
   today,
   canCreate,
   saveLastView,
+  onGoTo,
+  onHelp,
 }: {
   view: CalendarView;
   date: string;
   today: string;
   canCreate: boolean;
   saveLastView?: (view: CalendarView) => Promise<{ error?: string }>;
+  /** G and ?: their dialogs (spec 017 RF-56, RF-62). */
+  onGoTo?: () => void;
+  onHelp?: () => void;
 }) {
   const router = useRouter();
 
@@ -51,7 +56,11 @@ export function useCalendarShortcuts({
       );
       if (!shortcut) return;
       event.preventDefault();
-      if (shortcut === "new") {
+      if (shortcut === "goto") {
+        onGoTo?.();
+      } else if (shortcut === "help") {
+        onHelp?.();
+      } else if (shortcut === "new") {
         router.push(`/dashboard/events/new?date=${date}`);
       } else if (shortcut === "today" && view === "agenda") {
         // The continuous agenda scrolls instead (spec 016 RF-58).
@@ -74,5 +83,5 @@ export function useCalendarShortcuts({
     }
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
-  }, [view, date, today, canCreate, saveLastView, router]);
+  }, [view, date, today, canCreate, saveLastView, onGoTo, onHelp, router]);
 }

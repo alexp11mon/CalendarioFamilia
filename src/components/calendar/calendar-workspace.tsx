@@ -57,7 +57,9 @@ import {
 } from "./event-interactions";
 import { Fab } from "./fab";
 import type { CalendarOption, EventFormValues } from "./event-form";
+import { GoToDateDialog } from "./go-to-date-dialog";
 import { MiniMonth } from "./mini-month";
+import { ShortcutsHelp } from "./shortcuts-help";
 import { MonthStrip } from "./month-strip";
 import { MonthView } from "./month-view";
 import { NextEventCard, type NextEventItem } from "./next-event-card";
@@ -229,7 +231,16 @@ export function CalendarWorkspace({
   editableCalendars?: CalendarOption[];
   createAction?: FormAction<FormState<keyof EventFormValues>>;
 }) {
-  useCalendarShortcuts({ view, date, today, canCreate, saveLastView });
+  const [keyDialog, setKeyDialog] = useState<"goto" | "help" | null>(null);
+  useCalendarShortcuts({
+    view,
+    date,
+    today,
+    canCreate,
+    saveLastView,
+    onGoTo: () => setKeyDialog("goto"),
+    onHelp: () => setKeyDialog("help"),
+  });
   useRefreshOnFocus(loadedAt);
   const [groups, setGroups] = useState(initialGroups);
   const [hiddenCategories, setHiddenCategories] = useState<ReadonlySet<string>>(
@@ -676,6 +687,25 @@ export function CalendarWorkspace({
           />
         ) : null}
         {interactive.dialog}
+        {keyDialog === "goto" ? (
+          <GoToDateDialog
+            date={date}
+            // `close` arrives later: never close a dialog opened since (G then ?).
+            onClose={() =>
+              setKeyDialog((open) => (open === "goto" ? null : open))
+            }
+            onGo={(next) => {
+              setKeyDialog(null);
+              router.push(calendarHref(view, next));
+            }}
+          />
+        ) : keyDialog === "help" ? (
+          <ShortcutsHelp
+            onClose={() =>
+              setKeyDialog((open) => (open === "help" ? null : open))
+            }
+          />
+        ) : null}
       </div>
     </EventInteractionsProvider>
   );

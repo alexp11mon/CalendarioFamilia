@@ -43,6 +43,8 @@ export function SeriesDelete({
         variant="danger"
         onClick={() => setAsking(true)}
         aria-haspopup="dialog"
+        // Supr in the detail presses it (spec 017 RF-55).
+        data-delete-event=""
       >
         Borrar evento
       </Button>

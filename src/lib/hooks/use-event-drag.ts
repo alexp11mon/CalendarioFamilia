@@ -41,7 +41,8 @@ const DAY_MINUTES = 24 * 60;
 
 /** What is under the pointer: a column of hours, a day of the strip or of the month (plan D3). */
 export function targetAt(x: number, y: number): DragTarget | null {
-  for (const element of document.elementsFromPoint(x, y)) {
+  // Absent where there is no layout (jsdom): then nothing is under the pointer.
+  for (const element of document.elementsFromPoint?.(x, y) ?? []) {
     if (!(element instanceof HTMLElement)) continue;
     if (element.dataset.timeCol !== undefined && element.dataset.day) {
       const rect = element.getBoundingClientRect();

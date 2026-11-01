@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRef } from "react";
 import { formatDateKeyFull } from "@/lib/calendar/format";
 import {
   dayEvents,
@@ -18,6 +19,7 @@ import {
   weekdayIndex,
   zonedDateKey,
 } from "@/lib/calendar/time-zone";
+import { useGridZoom } from "@/lib/hooks/use-grid-zoom";
 import { useNow } from "@/lib/hooks/use-now";
 import { DraggableEvent } from "./draggable-event";
 import { ScrollOnMount } from "./scroll-on-mount";
@@ -37,7 +39,6 @@ export type CreateInGrid = (
   anchor: Box,
 ) => void;
 
-const HOUR_PX = 48;
 const MIN_SLOT_PX = 22;
 const FIRST_VISIBLE_HOUR = 7;
 const HOURS = Array.from({ length: 24 }, (_, hour) => hour);
@@ -76,6 +77,9 @@ export function TimeGrid({
   draft?: GridDraft | null;
 }) {
   const now = useNow();
+  const root = useRef<HTMLDivElement>(null);
+  // Pinch or Ctrl + wheel change it, remembered on this device (spec 017 RF-49 to RF-53).
+  const hourPx = useGridZoom(root);
   const columns = {
     gridTemplateColumns: `3rem repeat(${days.length}, minmax(0, 1fr))`,
   };
@@ -91,7 +95,10 @@ export function TimeGrid({
 
   return (
     // The screen height under the header, never under 28 rem on a larger screen.
-    <div className="flex h-[calc(100dvh-4.5rem-env(safe-area-inset-top))] flex-col gap-3 tab:h-[max(32rem,calc(100dvh-14rem))]">
+    <div
+      ref={root}
+      className="flex h-[calc(100dvh-4.5rem-env(safe-area-inset-top))] flex-col gap-3 tab:h-[max(32rem,calc(100dvh-14rem))]"
+    >
       {/* The grid scrolls on its own; the day header and the strip stay on top (RF-38). */}
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-3xl bg-paper max-tab:-mx-4 max-tab:rounded-none">
         <div className="flex min-h-0 flex-1 flex-col">
@@ -175,17 +182,18 @@ export function TimeGrid({
             top={() =>
               showsToday
                 ? Math.max(0, minuteOfDay(Date.now(), timeZone) / 60 - 1) *
-                  HOUR_PX
-                : FIRST_VISIBLE_HOUR * HOUR_PX
+                  hourPx
+                : FIRST_VISIBLE_HOUR * hourPx
             }
-            className="min-h-0 flex-1 overflow-y-auto"
+            // Two fingers zoom the hours, never the page (plan R2).
+            className="min-h-0 flex-1 touch-pan-x touch-pan-y overflow-y-auto"
           >
             <div data-testid="time-grid" className="grid" style={columns}>
               <div>
                 {HOURS.map((hour) => (
                   <div
                     key={hour}
-                    style={{ height: HOUR_PX }}
+                    style={{ height: hourPx }}
                     className="pr-1 text-right text-[11px] text-muted tabular-nums"
                   >
                     {/* "9:00" on its line, as Google; midnight has no label (RF-44). */}
@@ -201,13 +209,13 @@ export function TimeGrid({
                   data-day={day}
                   data-time-col=""
                   className="relative border-l border-line"
-                  style={{ height: 24 * HOUR_PX }}
+                  style={{ height: 24 * hourPx }}
                 >
                   {HOURS.map((hour) => (
                     <div
                       key={hour}
                       aria-hidden="true"
-                      style={{ height: HOUR_PX }}
+                      style={{ height: hourPx }}
                       className="border-t border-line"
                     />
                   ))}
@@ -223,8 +231,8 @@ export function TimeGrid({
                       data-testid="draft-block"
                       aria-hidden="true"
                       style={{
-                        top: `${(draft.startMinute / 60) * HOUR_PX}px`,
-                        height: `${Math.max(((draft.endMinute - draft.startMinute) / 60) * HOUR_PX, MIN_SLOT_PX)}px`,
+                        top: `${(draft.startMinute / 60) * hourPx}px`,
+                        height: `${Math.max(((draft.endMinute - draft.startMinute) / 60) * hourPx, MIN_SLOT_PX)}px`,
                       }}
                       className="pointer-events-none absolute inset-x-0.5 z-10 overflow-hidden rounded-md border border-dashed border-ink bg-paper px-1 text-xs text-ink"
                     >
@@ -259,8 +267,8 @@ export function TimeGrid({
                         // A paper edge parts blocks that touch, as Google.
                         className="absolute border border-paper"
                         style={{
-                          top: `${(slot.startMinute / 60) * HOUR_PX}px`,
-                          height: `${Math.max(((slot.endMinute - slot.startMinute) / 60) * HOUR_PX, MIN_SLOT_PX)}px`,
+                          top: `${(slot.startMinute / 60) * hourPx}px`,
+                          height: `${Math.max(((slot.endMinute - slot.startMinute) / 60) * hourPx, MIN_SLOT_PX)}px`,
                           left: percent(slot.column * width),
                           width: percent(width),
                         }}
@@ -273,7 +281,7 @@ export function TimeGrid({
                       data-testid="now-line"
                       aria-hidden="true"
                       style={{
-                        top: `${(minuteOfDay(now, timeZone) / 60) * HOUR_PX}px`,
+                        top: `${(minuteOfDay(now, timeZone) / 60) * hourPx}px`,
                       }}
                       className="pointer-events-none absolute inset-x-0 z-20 h-0.5 bg-accent-ink"
                     >

@@ -119,6 +119,9 @@ describe("SlotLayer", () => {
     pointer("pointerMove", layer, 9.15, "touch");
     expect(screen.queryByText("(Sin título)")).toBeNull();
     pointer("pointerUp", layer, 9.15, "touch");
+    // Opened by the click after it, which would otherwise close the new window (spec 017).
+    expect(onCreate).not.toHaveBeenCalled();
+    fireEvent.click(layer);
 
     expect(onCreate).toHaveBeenCalledWith(
       "2026-10-21",
@@ -132,6 +135,33 @@ describe("SlotLayer", () => {
 
     pointer("pointerDown", layer, 9, "touch");
     fireEvent.pointerCancel(layer, { pointerId: 1, pointerType: "touch" });
+
+    expect(onCreate).not.toHaveBeenCalled();
+  });
+
+  it("a pinch creates nothing (spec 017 RF-49)", () => {
+    const { onCreate, layer } = setup();
+
+    pointer("pointerDown", layer, 9, "touch");
+    fireEvent.pointerDown(layer, {
+      clientY: at(11),
+      clientX: 150,
+      button: 0,
+      pointerId: 2,
+      pointerType: "touch",
+    });
+    pointer("pointerMove", layer, 8, "touch");
+    pointer("pointerUp", layer, 8, "touch");
+
+    expect(onCreate).not.toHaveBeenCalled();
+  });
+
+  it("a finger that moves without scrolling creates nothing", () => {
+    const { onCreate, layer } = setup();
+
+    pointer("pointerDown", layer, 9, "touch");
+    pointer("pointerMove", layer, 10, "touch");
+    pointer("pointerUp", layer, 10, "touch");
 
     expect(onCreate).not.toHaveBeenCalled();
   });

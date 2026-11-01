@@ -13,6 +13,8 @@ import { fromMinutes } from "@/lib/calendar/time-options";
 const DAY_MINUTES = 24 * 60;
 // Below this many pixels a mouse press is still a click, not a drag.
 const DRAG_THRESHOLD = 4;
+// A finger trembles: past this it is a gesture, not a tap (as the long press, spec 017).
+const TOUCH_SLOP = 8;
 const KEYBOARD_RANGE: MinuteRange = { start: 9 * 60, end: 10 * 60 };
 
 interface Gesture {
@@ -40,6 +42,8 @@ export function SlotLayer({
 }) {
   const layer = useRef<HTMLDivElement>(null);
   const gesture = useRef<Gesture | null>(null);
+  // The slot a finger tapped, opened by the click that follows (see onPointerUp).
+  const tap = useRef<MinuteRange | null>(null);
   const [preview, setPreview] = useState<MinuteRange | null>(null);
   // The Escape listener of the current drag, so the same function is removed.
   const escapeListener = useRef<((event: KeyboardEvent) => void) | null>(null);
@@ -72,6 +76,11 @@ export function SlotLayer({
 
   function onPointerDown(event: PointerEvent<HTMLDivElement>) {
     if (event.button !== 0) return;
+    // A second finger is a pinch of the hours, not a tap (spec 017 RF-49).
+    if (gesture.current) {
+      stop();
+      return;
+    }
     const touch = event.pointerType === "touch";
     gesture.current = {
       pointerId: event.pointerId,
@@ -92,7 +101,10 @@ export function SlotLayer({
 
   function onPointerMove(event: PointerEvent<HTMLDivElement>) {
     const current = gesture.current;
-    if (!current || current.touch || current.pointerId !== event.pointerId) {
+    if (!current || current.pointerId !== event.pointerId) return;
+    // A finger that moves is not a tap, even where the grid does not scroll.
+    if (current.touch) {
+      if (Math.abs(event.clientY - current.y) > TOUCH_SLOP) stop();
       return;
     }
     if (
@@ -112,7 +124,10 @@ export function SlotLayer({
       ? dragRange(minute(current.y, 15), minute(event.clientY, 15))
       : clickRange(minute(current.y, 30));
     stop();
-    onCreate(day, range, anchorOf(range));
+    // A finger's click comes after its pointerup: opening now, that click would
+    // land on the new window's backdrop and close it. Its click opens it.
+    if (current.touch) tap.current = range;
+    else onCreate(day, range, anchorOf(range));
   }
 
   return (
@@ -123,6 +138,11 @@ export function SlotLayer({
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
       onPointerCancel={stop}
+      onClick={() => {
+        const range = tap.current;
+        tap.current = null;
+        if (range) onCreate(day, range, anchorOf(range));
+      }}
       className="absolute inset-0 cursor-cell select-none"
     >
       <button

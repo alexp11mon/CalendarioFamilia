@@ -101,7 +101,9 @@ export function EventBlock({
   style?: CSSProperties;
   className?: string;
   /** Handlers of a draggable event (spec 017 plan drag-hook). */
-  anchor?: Omit<ComponentProps<"a">, "href" | "style" | "className">;
+  anchor?: Omit<ComponentProps<"a">, "href" | "style" | "className"> & {
+    "data-lifted"?: string;
+  };
   /** Drawn after the text: the resize handle and the hours while dragging. */
   children?: ReactNode;
 }) {

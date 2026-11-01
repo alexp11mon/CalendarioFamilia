@@ -5,6 +5,7 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useRef,
   useState,
@@ -43,11 +44,13 @@ export interface EventInteractionsApi {
   setDragging: (value: boolean) => void;
   /** The event being dragged, drawn lifted (RF-8). */
   draggingId: string | null;
+  /** Left lifted by a finger: shows its end handle until a tap elsewhere (RF-11). */
+  liftedId: string | null;
   /** Presses an event: a drag starts once it moves (RF-5, RF-10). */
   startDrag: (
     event: CalendarEventItem,
     pointer: PointerEvent,
-    options: { mode: DragMode; resize?: boolean },
+    options: { mode: DragMode; resize?: boolean; lifted?: boolean },
   ) => void;
   change: (
     event: CalendarEventItem,
@@ -106,6 +109,7 @@ export function useEventInteractionsState<T extends CalendarEventItem>({
   const showUndo = useUndoToast();
   const [dragging, setDragging] = useState(false);
   const [draggingId, setDraggingId] = useState<string | null>(null);
+  const [liftedId, setLiftedId] = useState<string | null>(null);
   const [preview, setPreview] = useState<{ id: string; times: Times } | null>(
     null,
   );
@@ -216,7 +220,20 @@ export function useEventInteractionsState<T extends CalendarEventItem>({
       setDragging(event !== null);
       setDraggingId(event?.id ?? null);
     },
+    lift: (event) => setLiftedId(event.id),
   });
+
+  // A press anywhere but on the lifted event puts it down (RF-11).
+  useEffect(() => {
+    if (!liftedId) return;
+    const putDown = (event: globalThis.PointerEvent) => {
+      const target = event.target as Element | null;
+      if (!target?.closest?.(`[data-lifted]`)) setLiftedId(null);
+    };
+    window.addEventListener("pointerdown", putDown, { capture: true });
+    return () =>
+      window.removeEventListener("pointerdown", putDown, { capture: true });
+  }, [liftedId]);
 
   const api = useMemo<EventInteractionsApi>(
     () => ({
@@ -225,6 +242,7 @@ export function useEventInteractionsState<T extends CalendarEventItem>({
       dragging,
       setDragging,
       draggingId,
+      liftedId,
       startDrag: drag.start,
       change,
       remove: async (event) => {
@@ -241,6 +259,7 @@ export function useEventInteractionsState<T extends CalendarEventItem>({
       dragging,
       draggingId,
       editableCalendarIds,
+      liftedId,
       run,
       setOverride,
       settle,

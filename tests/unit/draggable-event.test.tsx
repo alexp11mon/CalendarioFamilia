@@ -335,6 +335,98 @@ describe("DraggableEvent", () => {
     expect(h.quickChange).not.toHaveBeenCalled();
   });
 
+  describe("with a finger (RF-6, RF-11, RF-22)", () => {
+    const touch = (hours: number, x = 150, pointerId = 1) => ({
+      clientX: x,
+      clientY: at(hours),
+      button: 0,
+      pointerId,
+      pointerType: "touch",
+    });
+
+    beforeEach(() => {
+      vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    });
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it("holding 500 ms lifts it, then it follows the finger and the page does not pan", async () => {
+      setup();
+      fireEvent.pointerDown(block("Cena"), touch(10.25));
+      act(() => vi.advanceTimersByTime(499));
+      expect(block("Cena")).not.toHaveClass("ring-2");
+      act(() => vi.advanceTimersByTime(1));
+      expect(block("Cena")).toHaveClass("ring-2");
+      expect(fireEvent.touchMove(window)).toBe(false);
+
+      fireEvent.pointerMove(window, touch(12.25));
+      await act(async () => {
+        fireEvent.pointerUp(window, touch(12.25));
+      });
+      expect(h.quickChange).toHaveBeenCalledWith(
+        "e1",
+        expect.objectContaining({ startsAt: "2026-11-03T11:00:00.000Z" }),
+        {},
+      );
+    });
+
+    it("moving before 500 ms scrolls or swipes instead (RF-22)", () => {
+      setup();
+      fireEvent.pointerDown(block("Cena"), touch(10.25));
+      fireEvent.pointerMove(window, touch(10.6));
+      act(() => vi.advanceTimersByTime(600));
+      expect(block("Cena")).not.toHaveClass("ring-2");
+      expect(fireEvent.touchMove(window)).toBe(true);
+    });
+
+    it("a second finger cancels the press", () => {
+      setup();
+      fireEvent.pointerDown(block("Cena"), touch(10.25));
+      fireEvent.pointerDown(window, touch(11, 160, 2));
+      act(() => vi.advanceTimersByTime(600));
+      expect(block("Cena")).not.toHaveClass("ring-2");
+    });
+
+    it("stays lifted with a handle that changes the end, until a tap elsewhere (RF-11)", async () => {
+      setup();
+      expect(block("Cena").querySelector("[data-handle]")).toBeNull();
+      fireEvent.pointerDown(block("Cena"), touch(10.25));
+      act(() => vi.advanceTimersByTime(500));
+      await act(async () => {
+        fireEvent.pointerUp(window, touch(10.25));
+      });
+      expect(h.quickChange).not.toHaveBeenCalled();
+      expect(block("Cena")).toHaveClass("ring-2", "touch-none");
+      const handle = block("Cena").querySelector("[data-handle]")!;
+      expect(handle).not.toBeNull();
+
+      // Lifted, the handle stretches at once, without holding again.
+      fireEvent.pointerDown(handle, touch(11));
+      fireEvent.pointerMove(window, touch(12));
+      await act(async () => {
+        fireEvent.pointerUp(window, touch(12));
+      });
+      expect(h.quickChange).toHaveBeenCalledWith(
+        "e1",
+        expect.objectContaining({
+          startsAt: "2026-11-03T09:00:00.000Z",
+          endsAt: "2026-11-03T11:00:00.000Z",
+        }),
+        {},
+      );
+
+      fireEvent.pointerDown(document.body, touch(20));
+      expect(block("Cena")).not.toHaveClass("ring-2");
+    });
+
+    it("the system menu of a long press never opens", () => {
+      setup();
+      fireEvent.pointerDown(block("Cena"), touch(10.25));
+      expect(fireEvent.contextMenu(block("Cena"))).toBe(false);
+    });
+  });
+
   it("scrolls the grid near its bottom edge (RF-9)", async () => {
     setup();
     down(block("Cena"), 10.25);

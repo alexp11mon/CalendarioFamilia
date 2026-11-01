@@ -14,6 +14,7 @@ import {
 } from "@/lib/calendar/drag";
 import type { CalendarEventItem } from "@/lib/calendar/layout";
 import { daysBetween } from "@/lib/calendar/ranges";
+import { utcToZonedParts } from "@/lib/calendar/time-zone";
 
 // The gesture of moving and resizing events (spec 017 RF-5 to RF-23, plan
 // drag-hook, D1 to D4). It lives with the calendar, not in the block: the
@@ -77,9 +78,16 @@ export function resultFor(
   }
   if (target.kind === "month") return null;
   if (resize) {
-    return target.kind === "grid"
-      ? resizeEnd(event, target.minute, timeZone)
-      : null;
+    if (target.kind !== "grid") return null;
+    // The end moves as far as the pointer, wherever the handle was grabbed.
+    const { hour, minute } = utcToZonedParts(event.startsAt, timeZone);
+    const end =
+      hour * 60 +
+      minute +
+      (Date.parse(event.endsAt) - Date.parse(event.startsAt)) / 60_000;
+    const moved =
+      grab?.kind === "grid" ? target.minute - grab.minute : target.minute - end;
+    return resizeEnd(event, end + moved, timeZone);
   }
   if (target.kind === "allday") {
     // A timed event dropped on the strip turns all day (RF-13, RF-15).
@@ -125,6 +133,8 @@ export interface DragCallbacks {
   /** It was dropped somewhere new (RF-18). */
   drop: (event: CalendarEventItem, times: Times, resized: boolean) => void;
   setDragging: (event: CalendarEventItem | null) => void;
+  /** A finger let go of a lifted event: it stays lifted, with its handle (RF-11). */
+  lift?: (event: CalendarEventItem) => void;
 }
 
 /** Swallows the click that follows a drag, so the event does not open (plan R8). */
@@ -180,9 +190,11 @@ function createController(callbacks: DragCallbacks) {
     window.removeEventListener("pointercancel", onCancel);
     window.removeEventListener("keydown", onKey);
     window.removeEventListener("touchmove", preventScroll);
+    window.removeEventListener("pointerdown", onOtherPointer);
     if (!current.active) return;
     swallowNextClick();
     latest.current.setDragging(null);
+    if (current.touch) latest.current.lift?.(current.event);
     // Dropped where it was, or outside the view: nothing is saved (RF-19, cases).
     if (outcome === "drop" && current.result) {
       latest.current.drop(current.event, current.result, current.resize);
@@ -258,6 +270,11 @@ function createController(callbacks: DragCallbacks) {
     if (event.pointerId === session?.pointerId) end("cancel");
   }
 
+  // A second finger is a pinch or a scroll, never a drag (RF-22).
+  function onOtherPointer(event: globalThis.PointerEvent) {
+    if (event.pointerId !== session?.pointerId) end("cancel");
+  }
+
   function onKey(event: KeyboardEvent) {
     // Escape drops a mouse drag where it started (RF-20).
     if (event.key === "Escape" && session?.active) end("cancel");
@@ -266,10 +283,12 @@ function createController(callbacks: DragCallbacks) {
   function start(
     event: CalendarEventItem,
     pointer: PointerEvent,
-    options: { mode: DragMode; resize?: boolean },
+    options: { mode: DragMode; resize?: boolean; lifted?: boolean },
   ) {
     if (pointer.button !== 0 || session) return;
     const touch = pointer.pointerType === "touch";
+    // An event already lifted moves at once under the finger (RF-11).
+    const now = touch && Boolean(options.lifted);
     // A mouse press would select text or start the link's own drag.
     if (!touch) pointer.preventDefault();
     session = {
@@ -288,13 +307,15 @@ function createController(callbacks: DragCallbacks) {
       scroller: (pointer.currentTarget as HTMLElement).closest<HTMLElement>(
         "[data-grid-scroll]",
       ),
-      timer: touch ? setTimeout(activate, LONG_PRESS_MS) : null,
+      timer: touch && !now ? setTimeout(activate, LONG_PRESS_MS) : null,
       frame: null,
     };
     window.addEventListener("pointermove", onMove);
     window.addEventListener("pointerup", onUp);
     window.addEventListener("pointercancel", onCancel);
     window.addEventListener("keydown", onKey);
+    window.addEventListener("pointerdown", onOtherPointer);
+    if (now) activate();
   }
 
   return {

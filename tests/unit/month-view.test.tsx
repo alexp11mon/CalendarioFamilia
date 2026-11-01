@@ -408,6 +408,25 @@ describe("MonthView dragging", () => {
     );
   });
 
+  it("a finger moves it after holding it 500 ms (RF-16)", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    setup();
+    const link = screen.getByRole("link", { name: /Cena/ });
+    const finger = { pointerId: 1, pointerType: "touch", button: 0 };
+    fireEvent.pointerDown(link, { ...point("2026-10-21"), ...finger });
+    act(() => vi.advanceTimersByTime(500));
+    fireEvent.pointerMove(window, { ...point("2026-10-23"), ...finger });
+    await act(async () => {
+      fireEvent.pointerUp(window, { ...point("2026-10-23"), ...finger });
+    });
+    vi.useRealTimers();
+    expect(h.quickChange).toHaveBeenCalledWith(
+      DINNER.id,
+      expect.objectContaining({ startsAt: "2026-10-23T08:00:00.000Z" }),
+      {},
+    );
+  });
+
   it("an event the user cannot write to does not lift", async () => {
     setup();
     await drag("Ajeno", "2026-10-22", "2026-10-28");

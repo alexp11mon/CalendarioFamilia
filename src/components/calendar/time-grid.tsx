@@ -243,8 +243,9 @@ export function TimeGrid({
                       <DraggableEvent
                         key={slot.event.id}
                         mode="grid"
-                        // Its bottom edge is where it ends (RF-10).
+                        // Only within one day: an overnight event is never resized (spec 017 cases).
                         resizable={
+                          zonedDateKey(slot.event.startsAt, timeZone) === day &&
                           zonedDateKey(
                             Date.parse(slot.event.endsAt) - 1,
                             timeZone,

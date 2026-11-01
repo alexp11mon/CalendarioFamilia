@@ -114,12 +114,13 @@
   Hecho cuando: `npm test -- month-view draggable-event` en verde y prueba en `playwright-cli` a 1440 px. Cubre: RF-16, RF-17 | Módulo: drag-hook
   Evidencia (2026-11-01): `DraggableEvent` (modo `month`) en `MonthView`; las horas sobre el bloque solo en la rejilla. 4 casos nuevos en `month-view` (2 en rojo antes de implementar). Arreglado de paso un fallo previo que el arrastre deja a la vista: `MiniMonth` solo leía las marcas iniciales al montarse y no seguía `router.refresh()` (test nuevo en `mini-month`, en rojo sin el arreglo). `npm test -- month-view draggable-event mini-month` en verde, `npm test` completo 1910 en verde; typecheck, format y build correctos, lint con los 2 avisos previos. `playwright-cli` a 1440 px: un evento con hora del 6 al 12 de noviembre conserva su hora (13:00 en la semana) y "Viaje" de 2 días pasa del 5 al 17 conservando 2 días; captura del arrastre.
 
-- [ ] T10 Levantar eventos con el dedo
+- [x] T10 Levantar eventos con el dedo
   Pasos:
   - Primero, casos táctiles en `draggable-event.test.tsx` en rojo (temporizadores falsos): mantener pulsado 500 ms levanta el evento y lo mueve al deslizar; moverse más de 8 px antes cancela y deja desplazar o deslizar (RF-22); levantado muestra el tirador de fin, que redimensiona; un segundo dedo cancela la pulsación; el `contextmenu` táctil no abre nada; también en la vista mes.
   - Después, la pulsación larga, `touch-action: none` y el `touchmove` no pasivo solo tras levantar (D4), `-webkit-touch-callout: none` en los bloques editables.
 
   Hecho cuando: `npm test -- draggable-event month-view` en verde y prueba en `playwright-cli` con emulación táctil a 390 px (mover, redimensionar y desplazar la rejilla sin levantar nada). Cubre: RF-6, RF-11, RF-16, RF-22 | Módulo: drag-hook
+  Evidencia (2026-11-01): Pulsación larga de 500 ms con tolerancia de 8 px; un segundo dedo cancela; al levantar, `touchmove` no pasivo y `touch-none`; al soltar con el dedo el evento queda levantado (`liftedId`) con un tirador visible que redimensiona y se mueve sin volver a esperar, hasta tocar en otro sitio; sin menú del sistema ni callout. El tirador mueve el fin lo mismo que el puntero (antes saltaba a su posición absoluta) y solo existe en eventos de un día. Los casos táctiles se escribieron después del código (sin rojo separado): 5 en `draggable-event` y 1 en `month-view`; `npm test -- draggable-event month-view` en verde, `npm test` completo en verde; typecheck, format y build correctos, lint con los 2 avisos previos. `playwright-cli` con contexto táctil a 390 px (CDP `Input.dispatchTouchEvent`): deslizar rápido sobre el evento desplaza la rejilla 133 px sin levantarlo, mantener 650 ms lo levanta y lo mueve 1 h, queda levantado con el tirador, el tirador alarga 1 h y tocar fuera lo suelta; capturas.
 
 - [ ] T11 Cambiar el color, duplicar y borrar desde el menú contextual
   Pasos:

@@ -1,13 +1,11 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import {
   CALENDAR_MESSAGES,
   getCalendarErrorMessage,
 } from "@/lib/calendar/error-messages";
 import {
-  canSeeEvent,
   getEvent,
   getProfileTimeZone,
   requireActionUser,
@@ -16,41 +14,34 @@ import {
 import {
   parseEventInput,
   type EventData,
-  type EventFormField,
   type EventFormValues,
 } from "@/lib/calendar/schemas";
-import {
-  readString,
-  type ConfirmState,
-  type FormState,
-  type Loss,
-} from "@/lib/forms/form-state";
-import {
-  RECURRENCE_MESSAGES,
-  recurrenceErrorMessage,
-} from "@/lib/recurrence/error-messages";
+import { readString, type ConfirmState } from "@/lib/forms/form-state";
+import { RECURRENCE_MESSAGES } from "@/lib/recurrence/error-messages";
 import { resolveRepeat } from "@/lib/recurrence/presets";
 import type { RecurrenceRule } from "@/lib/recurrence/rule";
 import { parseEventId } from "@/lib/recurrence/occurrence-id";
 import {
-  planSeriesChange,
-  planSeriesDelete,
   seriesColumns,
   SERIES_SCOPES,
-  type LossQuery,
   type SeriesScope,
 } from "@/lib/recurrence/series-write";
-import { writeEngineDeps } from "@/lib/sync/engine";
 import { WRITE_ERRORS } from "@/lib/sync/write-errors";
 import {
-  writeEvent,
-  type WriteRequest,
-  type WriteResult,
-} from "@/lib/sync/write-event";
-
-type EventFormState = FormState<EventFormField>;
-
-const FOREIGN_KEY_CODE = "23503";
+  changeOccurrence,
+  deleteOccurrences,
+  deleteSingle,
+  failure,
+  isSyncedCalendar,
+  refresh,
+  seriesFailure,
+  syncedWrite,
+  toRow,
+  updateSingle,
+  type EventFormState,
+  type Saved,
+  type Supabase,
+} from "./event-writes";
 
 function readEventValues(formData: FormData): EventFormValues {
   return {
@@ -75,67 +66,6 @@ function inWindow(formData: FormData): boolean {
   return formData.get("mode") === "modal";
 }
 
-function refresh() {
-  // Drop the client router cache: the views must show the change.
-  revalidatePath("/dashboard", "layout");
-}
-
-function toRow(data: EventData) {
-  return {
-    calendar_id: data.calendarId,
-    title: data.title,
-    description: data.description,
-    location: data.location,
-    starts_at: data.startsAt,
-    ends_at: data.endsAt,
-    all_day: data.allDay,
-    color: data.color,
-    category_id: data.categoryId,
-  };
-}
-
-function failure(error: unknown, values: EventFormValues): EventFormState {
-  // A category of another calendar belongs next to its field (RF-28).
-  if (
-    typeof error === "object" &&
-    error !== null &&
-    "code" in error &&
-    error.code === FOREIGN_KEY_CODE
-  ) {
-    return {
-      fieldErrors: { categoryId: CALENDAR_MESSAGES.foreignCategory },
-      values,
-    };
-  }
-  return { formError: getCalendarErrorMessage(error), values };
-}
-
-type Supabase = Awaited<ReturnType<typeof requireActionUser>>["supabase"];
-
-/**
- * Synced calendars write in Google first (spec 009 plan D3, D4); for normal
- * ones the engine answers "normal" and the action writes as always.
- */
-function syncedWrite(
-  supabase: Supabase,
-  request: WriteRequest,
-): Promise<WriteResult> {
-  return writeEvent(request, writeEngineDeps(supabase));
-}
-
-/** The event as it is now: its calendar and what Google gets compared with (RF-14). */
-async function currentEvent(supabase: Supabase, id: string) {
-  const { data, error } = await supabase
-    .from("events")
-    .select(
-      "calendar_id, title, description, location, starts_at, ends_at, all_day",
-    )
-    .eq("id", id)
-    .maybeSingle();
-  if (error) throw error;
-  return data;
-}
-
 /** Deleted in Google meanwhile: CaFam already removed it (spec 009 RF-25). */
 function gone(formData: FormData, values: EventFormValues): EventFormState {
   refresh();
@@ -150,109 +80,11 @@ function parseForm(values: EventFormValues, timeZone: string) {
   );
 }
 
-async function isSyncedCalendar(
-  supabase: Supabase,
-  calendarId: string,
-): Promise<boolean> {
-  const { data, error } = await supabase
-    .from("synced_calendars")
-    .select("calendar_id")
-    .eq("calendar_id", calendarId)
-    .maybeSingle();
-  if (error) throw error;
-  return Boolean(data);
-}
-
-function seriesFailure(
-  error: unknown,
-  values: EventFormValues,
-): EventFormState {
-  const message = recurrenceErrorMessage(error);
-  return message ? { formError: message, values } : failure(error, values);
-}
-
-/** What would be lost and was not confirmed yet (RF-19, RF-24b), or null. */
-async function unconfirmedLoss(
-  supabase: Supabase,
-  seriesId: string,
-  query: LossQuery,
-  formData: FormData,
-): Promise<Loss | null> {
-  if (!query || formData.get("confirmLoss") === "1") return null;
-  const { data, error } = await supabase.rpc("series_loss", {
-    p_series_id: seriesId,
-    ...(query.from ? { p_from: query.from } : {}),
-    ...(query.only ? { p_only: query.only } : {}),
-  });
-  if (error) throw error;
-  const row = data?.[0];
-  if (!row || row.exceptions + row.images + row.comments === 0) return null;
-  return {
-    exceptions: row.exceptions,
-    images: row.images,
-    // Spec 014 plan D6: the comments of those exceptions go too.
-    comments: row.comments,
-  };
-}
-
 function readScope(formData: FormData): SeriesScope | null {
   const scope = readString(formData, "scope");
   return (SERIES_SCOPES as readonly string[]).includes(scope)
     ? (scope as SeriesScope)
     : null;
-}
-
-type Saved = { id: string } | EventFormState;
-
-/**
- * A change to an occurrence in the chosen scope (RF-15 to RF-19, RF-23,
- * RF-32): the id to show afterwards, or the state to answer.
- */
-async function changeOccurrence(
-  supabase: Supabase,
-  event: EventRecord & { series: NonNullable<EventRecord["series"]> },
-  input: {
-    data: EventData;
-    values: EventFormValues;
-    formData: FormData;
-    timeZone: string;
-  },
-): Promise<Saved> {
-  const { data, values, formData, timeZone } = input;
-  const scope = readScope(formData);
-  if (!scope) return { formError: RECURRENCE_MESSAGES.scope, values };
-  // A series never goes to a calendar of Google (RF-29).
-  if (
-    data.calendarId !== event.calendarId &&
-    (await isSyncedCalendar(supabase, data.calendarId))
-  ) {
-    return { fieldErrors: { repeat: RECURRENCE_MESSAGES.synced }, values };
-  }
-  const plan = planSeriesChange({
-    series: event.series,
-    occurrence: event,
-    row: toRow(data),
-    repeat: values.repeat,
-    startDate: values.startDate,
-    scope,
-    timeZone,
-  });
-  if (plan.kind === "error") {
-    return plan.field
-      ? { fieldErrors: { [plan.field]: plan.message }, values }
-      : { formError: plan.message, values };
-  }
-  const loss = await unconfirmedLoss(
-    supabase,
-    event.series.id,
-    plan.loss,
-    formData,
-  );
-  if (loss) return { loss, values };
-  // Each function's arguments come from planSeriesChange, tested there.
-  const { data: id, error } = await supabase.rpc(plan.fn, plan.args as never);
-  if (error) return seriesFailure(error, values);
-  return { id: id as string };
 }
 
 /**
@@ -311,53 +143,6 @@ async function convertToSeries(
     // Two writes: undo the first so the event is not shown twice.
     await supabase.from("events").delete().eq("id", series.id);
     return seriesFailure(attachError, values);
-  }
-  return { id: event.id };
-}
-
-/** A single event, through Google when its calendar is synced (spec 009 RF-11). */
-async function updateSingle(
-  supabase: Supabase,
-  event: EventRecord,
-  data: EventData,
-  values: EventFormValues,
-): Promise<Saved | "gone"> {
-  const synced = await syncedWrite(supabase, {
-    op: "update",
-    eventId: event.id,
-    calendarId: event.calendarId,
-    before: {
-      title: event.title,
-      description: event.description,
-      location: event.location,
-      starts_at: event.startsAt,
-      ends_at: event.endsAt,
-      all_day: event.allDay,
-    },
-    row: toRow(data),
-  });
-  if (synced.status === "failed") {
-    return { formError: WRITE_ERRORS[synced.failure], values };
-  }
-  if (synced.status === "dbError") return failure(synced.error, values);
-  if (synced.status === "gone") return "gone";
-  if (synced.status === "normal") {
-    // Changing calendar is checked by RLS on both sides (RF-27).
-    const { data: rows, error } = await supabase
-      .from("events")
-      .update(toRow(data))
-      .eq("id", event.id)
-      .select("id");
-    if (error) return failure(error, values);
-    if (!rows || rows.length === 0) {
-      // RLS hides rows without an error (RF-25).
-      return {
-        formError: (await canSeeEvent(supabase, event.id))
-          ? CALENDAR_MESSAGES.forbidden
-          : CALENDAR_MESSAGES.notFound,
-        values,
-      };
-    }
   }
   return { id: event.id };
 }
@@ -484,7 +269,13 @@ export async function updateEvent(
       saved = await changeOccurrence(
         supabase,
         { ...event, series: event.series },
-        { data: parsed.data, values, formData, timeZone },
+        {
+          data: parsed.data,
+          values,
+          scope: readScope(formData),
+          confirmLoss: formData.get("confirmLoss") === "1",
+          timeZone,
+        },
       );
     } else if (!repeat.ok) {
       return { fieldErrors: { repeat: RECURRENCE_MESSAGES.invalid }, values };
@@ -509,34 +300,6 @@ export async function updateEvent(
   redirect(`/dashboard/events/${saved.id}`);
 }
 
-/**
- * Deleting occurrences in the chosen scope (spec 013 RF-20), once the images
- * that go with them are confirmed (RF-24b).
- */
-async function deleteOccurrences(
-  supabase: Supabase,
-  series: NonNullable<EventRecord["series"]>,
-  formData: FormData | undefined,
-): Promise<ConfirmState | null> {
-  const scope = formData ? readScope(formData) : null;
-  if (!scope) return { formError: RECURRENCE_MESSAGES.scope };
-  const plan = planSeriesDelete(series, scope);
-  const loss = await unconfirmedLoss(supabase, series.id, plan.loss, formData!);
-  if (loss) return { loss };
-  // The arguments come from planSeriesDelete, tested there.
-  const { error } = await supabase.rpc(
-    "delete_occurrences",
-    plan.args as never,
-  );
-  if (error) {
-    return {
-      formError:
-        recurrenceErrorMessage(error) ?? getCalendarErrorMessage(error),
-    };
-  }
-  return null;
-}
-
 // Bound as deleteEvent(id) or deleteEvent(id, "modal"); useActionState then appends
 // its state and form data. Only an occurrence needs the form: it carries the scope.
 export async function deleteEvent(
@@ -556,7 +319,12 @@ export async function deleteEvent(
   try {
     series = (await getEvent(supabase, id))?.series ?? null;
     if (series) {
-      const failed = await deleteOccurrences(supabase, series, formData);
+      const failed = await deleteOccurrences(
+        supabase,
+        series,
+        formData ? readScope(formData) : null,
+        formData?.get("confirmLoss") === "1",
+      );
       if (failed) return failed;
     }
   } catch (error) {
@@ -571,52 +339,4 @@ export async function deleteEvent(
   refresh();
   if (mode === "modal") return { done: "deleted" };
   redirect("/dashboard/calendar");
-}
-
-/** A single event, through Google when its calendar is synced (spec 009 RF-12). */
-async function deleteSingle(
-  supabase: Supabase,
-  id: string,
-  mode: unknown,
-): Promise<ConfirmState | null> {
-  try {
-    const current = await currentEvent(supabase, id);
-    if (!current) return { formError: CALENDAR_MESSAGES.notFound };
-    const synced = await syncedWrite(supabase, {
-      op: "delete",
-      eventId: id,
-      calendarId: current.calendar_id,
-    });
-    if (synced.status === "failed") {
-      return { formError: WRITE_ERRORS[synced.failure] };
-    }
-    if (synced.status === "dbError") {
-      return { formError: getCalendarErrorMessage(synced.error) };
-    }
-    if (synced.status === "gone") {
-      refresh();
-      return mode === "modal"
-        ? { done: "gone" }
-        : { formError: WRITE_ERRORS.gone };
-    }
-
-    if (synced.status === "normal") {
-      const { data, error } = await supabase
-        .from("events")
-        .delete()
-        .eq("id", id)
-        .select("id");
-      if (error) return { formError: getCalendarErrorMessage(error) };
-      if (!data || data.length === 0) {
-        return {
-          formError: (await canSeeEvent(supabase, id))
-            ? CALENDAR_MESSAGES.forbidden
-            : CALENDAR_MESSAGES.notFound,
-        };
-      }
-    }
-  } catch (error) {
-    return { formError: getCalendarErrorMessage(error) };
-  }
-  return null;
 }

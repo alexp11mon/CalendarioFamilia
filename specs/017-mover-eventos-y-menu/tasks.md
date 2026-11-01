@@ -49,7 +49,7 @@
   Hecho cuando: `npm test -- drag` en verde. Cubre: RF-5, RF-7, RF-8, RF-10, RF-12, RF-13, RF-14, RF-15, RF-16, RF-17, RF-19, RF-64 | Módulo: drag-core
   Evidencia (2026-11-01): rojo sin el módulo. `drag.test.ts` 23 tests en verde (cuartos, días, varios días, fin mínimo, medianoche, conversiones, mes, Alt+flechas, cambio de hora y texto). typecheck, format y build correctos, lint con los 2 avisos previos, `npm test` 1835 tests.
 
-- [ ] T3 Cambiar las horas o el color de un evento sin el formulario
+- [x] T3 Cambiar las horas o el color de un evento sin el formulario
   Pasos:
   - Primero, `tests/unit/quick-actions.test.ts` en rojo (con `getEvent`, Supabase y `writeEvent` simulados, como `event-actions.test.ts`):
     - `quickChange` de horas en un evento normal hace un `update` y devuelve un `undo` con los valores anteriores y el `updated_at` nuevo;
@@ -60,6 +60,7 @@
   - Después, `quick-actions.ts` con `quickChange`, y `changeOccurrence` de `actions.ts` recibe el alcance por argumento (`event-actions.test.ts` sigue en verde).
 
   Hecho cuando: `npm test -- quick-actions event-actions` en verde. Cubre: RF-1, RF-3, RF-4, RF-18, RF-36, RF-37, RF-38 | Módulo: quick-actions
+  Evidencia (2026-11-01): rojo sin la acción. Los ayudantes de escritura pasan de `actions.ts` a `event-writes.ts` (sin `"use server"`) y `changeOccurrence`/`deleteOccurrences` reciben el alcance por argumento; `quickChange` en `quick-actions.ts` con sus ayudantes en `quick-writes.ts` y los tipos en `lib/calendar/undo.ts`. `write-event.ts` ya no llama a Google si solo cambia el color (test nuevo). `quick-actions` y `event-actions` en verde. typecheck, format y build correctos, lint con los 2 avisos previos, `npm test` completo en verde.
 
 - [ ] T4 Borrar con deshacer, deshacer y pegar
   Pasos:

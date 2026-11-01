@@ -138,6 +138,25 @@ describe("update (RF-11, RF-14, RF-19)", () => {
     });
   });
 
+  it("a change of color only is saved in CaFam without calling Google (spec 017 RF-38)", async () => {
+    const result = await writeEvent(
+      {
+        op: "update",
+        eventId: "ev-1",
+        calendarId: "cal-a",
+        before: row,
+        row: { ...row, color: "#BDB2FF" },
+      },
+      deps(),
+    );
+    expect(result).toEqual({ status: "done", eventId: "ev-1" });
+    expect(googleCalls()).toEqual([]);
+    expect(named("sync_commit_event")[0].args).toMatchObject({
+      p_op: "update",
+      p_row: expect.objectContaining({ color: "#BDB2FF" }),
+    });
+  });
+
   it("patches first and moves after when the calendar changes (D7)", async () => {
     handlers.sync_write_context = () => ({
       data: { ...context, target_external_id: "b@group" },

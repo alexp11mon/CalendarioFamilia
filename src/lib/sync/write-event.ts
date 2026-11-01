@@ -111,7 +111,13 @@ export async function writeEvent(
   };
 
   // Left out when the calendar was uploaded: stays only in CaFam (D9, RF-42).
-  if (request.op !== "create" && !context.event_external_id) {
+  // Nothing Google keeps changed (the color, spec 017 RF-38): only CaFam.
+  if (
+    (request.op !== "create" && !context.event_external_id) ||
+    (request.op === "update" &&
+      context.target_external_id === context.calendar_external_id &&
+      Object.keys(toGooglePatch(request.before, request.row)).length === 0)
+  ) {
     return commit(
       request.op === "update" ? "update" : "delete",
       request.eventId,

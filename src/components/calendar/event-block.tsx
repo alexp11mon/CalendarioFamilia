@@ -113,6 +113,8 @@ export function EventBlock({
     <Link
       {...anchor}
       href={`/dashboard/events/${event.id}`}
+      // The keys of a focused event find it by this (spec 017 RF-64).
+      data-event-id={event.id}
       style={{ ...style, backgroundColor: event.color }}
       className={`${SHAPES[shape]} text-pastel-ink ring-1 ring-pastel-ink/15 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ink ${className}`}
     >

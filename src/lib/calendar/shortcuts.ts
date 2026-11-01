@@ -26,7 +26,7 @@ const KEYS: Record<string, Shortcut> = {
 // Inputs where a letter is never text: the shortcuts keep working on them.
 const NOT_TEXT = new Set(["checkbox", "radio", "button", "submit", "reset"]);
 
-function isTyping(target: EventTarget | null): boolean {
+export function isTyping(target: EventTarget | null): boolean {
   if (!(target instanceof Element)) return false;
   if (target instanceof HTMLElement && target.isContentEditable) return true;
   if (target.getAttribute("contenteditable") === "true") return true;

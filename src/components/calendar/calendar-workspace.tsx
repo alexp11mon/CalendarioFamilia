@@ -292,6 +292,7 @@ export function CalendarWorkspace({
     editableCalendarIds: editableIds,
     calendarColors,
     timeZone,
+    date,
   });
   const { dragging } = interactive.api;
 

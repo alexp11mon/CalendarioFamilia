@@ -14,6 +14,7 @@ import {
 } from "react";
 import {
   deleteForUndo,
+  pasteEvent,
   quickChange,
 } from "@/app/dashboard/events/quick-actions";
 import type {
@@ -26,11 +27,13 @@ import {
   type ScopeRequest,
 } from "@/components/recurrence/series-scope-choice";
 import { useToast } from "@/components/ui/toast";
-import { describeTimes, type Times } from "@/lib/calendar/drag";
+import { describeTimes, nudge, type Times } from "@/lib/calendar/drag";
 import type { CalendarEventItem } from "@/lib/calendar/layout";
 import { DEFAULT_CALENDAR_COLOR } from "@/lib/calendar/palette";
 import { UNDO_NOTICES, type Change } from "@/lib/calendar/undo";
 import { useEventDrag, type DragMode } from "@/lib/hooks/use-event-drag";
+import { useEventKeys } from "@/lib/hooks/use-event-keys";
+import { useEventClipboard } from "./event-clipboard";
 import { EventMenu, type MenuChoice } from "./event-menu";
 import { useUndoToast } from "./use-undo-toast";
 
@@ -107,11 +110,14 @@ export function useEventInteractionsState<T extends CalendarEventItem>({
   editableCalendarIds,
   calendarColors,
   timeZone,
+  date,
 }: {
   events: T[];
   editableCalendarIds: ReadonlySet<string>;
   calendarColors: ReadonlyMap<string, string>;
   timeZone: string;
+  /** The view's date: where Ctrl/⌘+V pastes without a slot chosen (RF-59). */
+  date?: string;
 }): { api: EventInteractionsApi; events: T[]; dialog: ReactNode } {
   const router = useRouter();
   const { show } = useToast();
@@ -125,6 +131,13 @@ export function useEventInteractionsState<T extends CalendarEventItem>({
     returnTo: HTMLElement;
   } | null>(null);
   const menuFor = useRef<string | null>(null);
+  const clipboard = useEventClipboard();
+  // Alt + arrows: the event before the first key, and when to save (plan D11).
+  const nudging = useRef<{
+    event: CalendarEventItem;
+    times: Times;
+    timer: ReturnType<typeof setTimeout>;
+  } | null>(null);
   const [preview, setPreview] = useState<{ id: string; times: Times } | null>(
     null,
   );
@@ -304,6 +317,61 @@ export function useEventInteractionsState<T extends CalendarEventItem>({
       }),
     [calendarColors, events, overrides, preview],
   );
+
+  // A nudged event is drawn in another column: keep the focus on it (RF-64).
+  useEffect(() => {
+    const id = nudging.current?.event.id;
+    if (!id || document.activeElement?.closest(`[data-event-id="${id}"]`))
+      return;
+    document.querySelector<HTMLElement>(`[data-event-id="${id}"]`)?.focus();
+  }, [shown]);
+
+  useEventKeys({
+    find: (id) => {
+      const event = shown.find((item) => item.id === id);
+      return event ? { editable: api.canEdit(event) } : null;
+    },
+    nudge: (id, direction) => {
+      const current = nudging.current;
+      const event =
+        current?.event.id === id
+          ? current.event
+          : events.find((item) => item.id === id);
+      if (!event) return;
+      const times = nudge(current?.times ?? event, direction, timeZone);
+      if (!times) return;
+      if (current) clearTimeout(current.timer);
+      setPreview({ id, times });
+      // One save, one notice and one Deshacer for the whole run of keys (plan D11).
+      const timer = setTimeout(() => {
+        nudging.current = null;
+        setPreview(null);
+        void change(event, { kind: "times", ...times }, "moved");
+      }, 600);
+      nudging.current = { event, times, timer };
+    },
+    remove: (id) => {
+      const event = shown.find((item) => item.id === id);
+      if (event) void api.remove(event);
+    },
+    copy: (id) => {
+      clipboard?.copy(id);
+      show(UNDO_NOTICES.copied);
+    },
+    paste: async (target) => {
+      const id = clipboard?.copied;
+      if (!id) return;
+      const place = target ?? (date ? { day: date } : null);
+      if (!place) return;
+      const result = await pasteEvent(id, place);
+      if (!result.ok) {
+        show(result.error);
+        return;
+      }
+      showUndo(UNDO_NOTICES.pasted, result.undo);
+      router.refresh();
+    },
+  });
 
   const closeMenu = useCallback(
     (restoreFocus: boolean) => {

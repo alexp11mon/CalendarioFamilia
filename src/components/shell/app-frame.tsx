@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { EventClipboardProvider } from "@/components/calendar/event-clipboard";
 import { ToastProvider } from "@/components/ui/toast";
 import type { AccentId } from "@/lib/theme/accents";
 import type { ThemeId } from "@/lib/theme/theme";
@@ -36,14 +37,16 @@ export function AppFrame({
     >
       <ThemeSync theme={theme} />
       <ToastProvider>
-        <CalendarHeaderProvider>
-          <SideRail signOutAction={signOutAction} />
-          <TopBar displayName={displayName} signOutAction={signOutAction} />
-          <div className="flex flex-1 flex-col pt-[calc(3.5rem+env(safe-area-inset-top))] tab:pt-0 tab:pb-24 lg:pb-0 lg:pl-20">
-            {children}
-          </div>
-          <BottomBar signOutAction={signOutAction} />
-        </CalendarHeaderProvider>
+        <EventClipboardProvider>
+          <CalendarHeaderProvider>
+            <SideRail signOutAction={signOutAction} />
+            <TopBar displayName={displayName} signOutAction={signOutAction} />
+            <div className="flex flex-1 flex-col pt-[calc(3.5rem+env(safe-area-inset-top))] tab:pt-0 tab:pb-24 lg:pb-0 lg:pl-20">
+              {children}
+            </div>
+            <BottomBar signOutAction={signOutAction} />
+          </CalendarHeaderProvider>
+        </EventClipboardProvider>
       </ToastProvider>
     </div>
   );

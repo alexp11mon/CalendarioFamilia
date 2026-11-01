@@ -19,7 +19,7 @@ async function InterceptedEvent({
   if (!data) return <GoneEvent />;
 
   return (
-    <EventModal title={data.detail.title}>
+    <EventModal title={data.detail.title} variant="sheet">
       <EventPanel
         detail={data.detail}
         timeZone={data.timeZone}

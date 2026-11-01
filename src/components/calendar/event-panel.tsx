@@ -90,6 +90,7 @@ export function EventPanel({
       } else if (key.key.toLowerCase() === "e") {
         key.preventDefault();
         setEditing(true);
+        modal?.expand();
       } else if (key.key === "Delete" || key.key === "Backspace") {
         key.preventDefault();
         panel.querySelector<HTMLButtonElement>("[data-delete-event]")?.click();
@@ -97,7 +98,7 @@ export function EventPanel({
     };
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
-  }, [editing, canEdit, clipboard, detail.id, show]);
+  }, [editing, canEdit, clipboard, detail.id, modal, show]);
 
   if (editing) {
     return (
@@ -151,7 +152,14 @@ export function EventPanel({
         }
         actions={
           <>
-            <Button variant="secondary" onClick={() => setEditing(true)}>
+            <Button
+              variant="secondary"
+              onClick={() => {
+                // Editing on a phone fills the screen (spec 017 RF-47).
+                setEditing(true);
+                modal?.expand();
+              }}
+            >
               Editar
             </Button>
             <LinkButton

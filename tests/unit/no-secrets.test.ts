@@ -87,7 +87,8 @@ describe("spec 007 secrets (T14)", () => {
     const allowed = [
       "lib/sync/providers/google.ts",
       "app/api/oauth/[provider]/callback/route.ts",
-      "lib/sync/run-sync.ts",
+      // Spec 018 T3: the token renewal moved from run-sync.ts to deps.ts.
+      "lib/sync/deps.ts",
       "types/database.ts",
     ];
     const mentions = FILES.filter(({ content }) =>

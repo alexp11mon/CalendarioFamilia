@@ -20,7 +20,7 @@
 
 ### Iteración 1
 
-- [ ] T1 Guardar y restaurar un evento borrado con sus imágenes y comentarios
+- [x] T1 Guardar y restaurar un evento borrado con sus imágenes y comentarios
   Pasos:
   - Primero, `tests/integration/event-undo.test.ts` en rojo. Comprueba:
     - `snapshot_event` funciona para propietario y Editor; Lector, ajeno y `anon` reciben `CF404`; un segundo `snapshot_event` del mismo usuario borra su instantánea anterior;
@@ -33,6 +33,7 @@
   - Después, la migración `event_undo` según "Modelo de datos" del plan.
 
   Hecho cuando: `npm run test:db -- event-undo event-images schema` en verde y `src/types/database.ts` con la tabla y las funciones nuevas. Cubre: RF-25, RF-28, RF-29, RF-30 | Módulo: undo-schema
+  Evidencia (2026-11-01): rojo antes de la migración (10 de 11 tests). Migración `20261101100000_event_undo.sql` aplicada en dev y tipos regenerados. `test:db -- event-undo event-images schema` 79 tests en verde. typecheck, format y build correctos, lint con los 2 avisos previos, `npm test` 1812 tests.
 
 - [ ] T2 Calcular dónde cae un evento arrastrado
   Pasos:

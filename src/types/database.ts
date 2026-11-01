@@ -615,6 +615,57 @@ export type Database = {
           },
         ]
       }
+      event_trash: {
+        Row: {
+          calendar_id: string
+          comments: Json
+          created_at: string
+          deleted_by: string
+          event: Json | null
+          id: string
+          images: Json
+          original_start: string | null
+          series_id: string | null
+        }
+        Insert: {
+          calendar_id: string
+          comments?: Json
+          created_at?: string
+          deleted_by?: string
+          event?: Json | null
+          id?: string
+          images?: Json
+          original_start?: string | null
+          series_id?: string | null
+        }
+        Update: {
+          calendar_id?: string
+          comments?: Json
+          created_at?: string
+          deleted_by?: string
+          event?: Json | null
+          id?: string
+          images?: Json
+          original_start?: string | null
+          series_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_trash_calendar_id_fkey"
+            columns: ["calendar_id"]
+            isOneToOne: false
+            referencedRelation: "calendars"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_trash_deleted_by_fkey"
+            columns: ["deleted_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       events: {
         Row: {
           all_day: boolean
@@ -1065,6 +1116,10 @@ export type Database = {
         Args: { p_event_id: string; p_images: Json }
         Returns: string[]
       }
+      restore_event: {
+        Args: { p_event_id?: string; p_trash_id: string }
+        Returns: string
+      }
       revoke_invite: { Args: { p_invite_id: string }; Returns: undefined }
       select_synced_calendars: {
         Args: { p_calendars: Json; p_connection_id: string }
@@ -1131,6 +1186,10 @@ export type Database = {
           p_pin: string
           p_role: Database["public"]["Enums"]["calendar_role"]
         }
+        Returns: string
+      }
+      snapshot_event: {
+        Args: { p_event_id: string; p_original_start?: string }
         Returns: string
       }
       split_series: {
@@ -1288,6 +1347,14 @@ export type Database = {
           p_target_calendar_id?: string
         }
         Returns: Json
+      }
+      trash_purge: { Args: never; Returns: undefined }
+      trash_scheduled_jobs: {
+        Args: never
+        Returns: {
+          jobname: string
+          schedule: string
+        }[]
       }
       update_occurrence: {
         Args: { p_fields: Json; p_original_start: string; p_series_id: string }

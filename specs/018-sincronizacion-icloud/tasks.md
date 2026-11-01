@@ -94,7 +94,9 @@ Verificación completa (P8) del 2026-11-01 en la rama, tras la T14:
 
 - Comprobación (a)–(i) con la cuenta real del usuario (T1): todo como esperaba el plan; `MOVE` y renombrar funcionan (detalle en el plan, "Resultado de la T1").
 
-Pendiente: la migración en producción, la demo en el iPhone y la aprobación del cierre (T15).
+- Migraciones `icloud_provider` y `sync_write_context_provider` aplicadas en producción por el usuario (2026-11-01), tras un `db push --dry-run` que listaba solo esas dos.
+
+Pendiente: integrar en `main`, la demo en el iPhone y la aprobación del cierre (T15).
 
 ## Trazabilidad RF -> Tareas
 

@@ -12,7 +12,7 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 Contexto completo del proyecto para cualquier IA que empiece a trabajar en él. Léelo entero antes de tocar código. El bloque de arriba lo gestiona `next dev`: no lo edites; todo lo de debajo es documentación del proyecto y `next dev` lo respeta.
 
-> Última actualización: 2026-11-01, al implementar la spec 018 (iCloud) en la rama `018-sincronizacion-icloud`: T1–T14 hechas (comprobada con una cuenta real), pendientes sus 2 migraciones en prod y la demo en el iPhone (T15).
+> Última actualización: 2026-11-01, al implementar la spec 018 (iCloud) en la rama `018-sincronizacion-icloud`: T1–T14 hechas (comprobada con una cuenta real), con sus 2 migraciones aplicadas en prod; pendiente la demo en el iPhone (T15).
 
 ## 1. Qué es
 
@@ -45,7 +45,7 @@ Contexto completo del proyecto para cualquier IA que empiece a trabajar en él. 
 | 015-asistente-de-chat | Asistente de chat sobre los eventos y la disponibilidad común, con un proveedor LLM gratuito (no Gemini) | **Spec aprobada** (2026-10-29), sin plan |
 | 016-calendario-estilo-google | Calendario como Google Calendar en el móvil: bloques rellenos, cabecera con cajón y "+", deslizar, agenda continua y fila de meses (enmienda 4 de la constitución) | **Cerrada** (2026-10-30), T1–T13 hechas; sin migraciones. La prueba en el iPhone se hace en producción |
 | 017-mover-eventos-y-menu | Mover y redimensionar arrastrando, menú contextual en el ordenador, "Deshacer" en los avisos, detalle en hoja inferior en el móvil, pellizcar para ampliar y atajos nuevos (enmienda 5) | **Cerrada** (2026-11-01), T1–T16 hechas; 2 migraciones aplicadas en prod |
-| 018-sincronizacion-icloud | Calendarios de iCloud (iPhone) por CalDAV con contraseña específica de app, con el mismo alcance que Google en la 007 y la 009 (leer, escribir, renombrar, crear y subir). Dependencia `tsdav` aprobada; se instala en la primera tarea | **Implementada** (2026-11-01) en la rama `018-sincronizacion-icloud`, T1–T14 hechas; pendientes las 2 migraciones en prod y la demo (T15); enmienda 6 aplicada |
+| 018-sincronizacion-icloud | Calendarios de iCloud (iPhone) por CalDAV con contraseña específica de app, con el mismo alcance que Google en la 007 y la 009 (leer, escribir, renombrar, crear y subir). Dependencia `tsdav` aprobada; se instala en la primera tarea | **Implementada** (2026-11-01) en la rama `018-sincronizacion-icloud`, T1–T14 hechas; 2 migraciones aplicadas en prod; pendiente la demo (T15); enmienda 6 aplicada |
 
 Las specs 001–004 (cerradas, no se editan) citan la gestión de cuenta como "spec 005" y OAuth como "spec 006": hoy son la 006 y la 007.
 
@@ -446,7 +446,7 @@ La decisión de acceso es una función pura, `getRouteAccess(pathname, hasSessio
   - `event_trash` (copia del evento, sus imágenes `ready` y sus comentarios, con `deleted_by`): RLS sin políticas y sin permisos para clientes; solo la tocan las funciones. Se guarda la última copia de cada usuario.
   - `snapshot_event(p_event_id, …)` (owner o editor, antes del borrado normal) y `restore_event(p_trash_id, p_event_id default null)` (solo quien borró, en el primer minuto y con el rol aún vigente; `p_event_id` cuelga imágenes y comentarios del evento recreado en Google). `trash_row(p_trash_id)` devuelve la fila guardada a quien borró. Una repetición sin fila se restaura quitando su fecha de `exdates`.
   - `images_claim_purge` deja en la cola los objetos de los últimos 2 minutos, así las imágenes sobreviven al "Deshacer". `pg_cron` `event-trash-purge` (05:00 UTC) borra las copias de más de 1 h; `trash_scheduled_jobs()` es la ayuda de tests.
-- Añadido por la spec 018 (migraciones `icloud_provider` y `sync_write_context_provider`; en dev, **pendientes en prod**):
+- Añadido por la spec 018 (migraciones `icloud_provider` y `sync_write_context_provider`; en dev y en prod (2026-11-01)):
   - Los `check` de `provider` en `calendar_connections` y `synced_calendars` admiten `'icloud'`. `google_access` guarda también el permiso de un calendario de iCloud (no se renombra; lo explica un comentario).
   - `sync_write_context` devuelve además `provider`. El resto de funciones de la 007 y la 009 no cambian: `connect_account` guarda en Vault la credencial de iCloud como guarda el token de Google, y `sync_claim_*` ya devolvían `provider`.
 - La evolución prevista (`calendar_invites`, `calendar_access_codes`, …) está en el Anexo A de `specs/001-base-aplicacion/plan.md`.
@@ -669,6 +669,6 @@ La **007 (sincronización de Google, solo lectura, y grupos)** y la **009 (sincr
 - La **013 (eventos recurrentes)** está cerrada (2026-10-31), con sus 6 migraciones aplicadas en prod.
 - La **014 (comentarios)** está cerrada (2026-11-01), con sus 2 migraciones aplicadas en prod.
 - La **017 (mover eventos, menú y "Deshacer")** está cerrada (2026-11-01), con sus 2 migraciones aplicadas en prod. Al soltar, cambiar el color o borrar una repetición se pregunta el alcance; "Deshacer" solo con "Solo este evento".
-- La **018 (iCloud)** está implementada en la rama `018-sincronizacion-icloud` (T1–T14; la comprobación con una cuenta real confirmó `MOVE` y renombrar). Falta: aplicar sus 2 migraciones en prod, integrar en `main` y la demo en el iPhone para cerrarla (T15).
+- La **018 (iCloud)** está implementada en la rama `018-sincronizacion-icloud` (T1–T14; la comprobación con una cuenta real confirmó `MOVE` y renombrar). Sus 2 migraciones ya están en prod. Falta: integrar en `main` y la demo en el iPhone para cerrarla (T15).
 - **Siguiente:** cerrar la 018 y después la 015 (asistente de chat), con su plan y sus tareas aprobados. Las specs de la 011 a la 015 están aprobadas desde el 2026-10-29.
 - Los usuarios de prueba usan `@cafam.test`. Los antiguos del dominio anterior se borraron de dev en la spec 010 (T5), con permiso del usuario.

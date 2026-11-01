@@ -288,6 +288,20 @@ describe("restore_event (RF-28, RF-29)", () => {
   });
 });
 
+describe("trash_row (T4)", () => {
+  it("gives the saved row only to whoever deleted", async () => {
+    const event = await createEvent();
+    const { data: trashId } = await snapshot(editor, event.id);
+    const own = await editor.client.rpc("trash_row", { p_trash_id: trashId! });
+    expect(own.error).toBeNull();
+    expect(own.data).toMatchObject({ id: event.id, title: "Cena" });
+    const other = await owner.client.rpc("trash_row", {
+      p_trash_id: trashId!,
+    });
+    expect(other.data).toBeNull();
+  });
+});
+
 describe("occurrences of a series", () => {
   const START = "2026-11-10T17:00:00Z";
   const SERIES = {

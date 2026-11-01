@@ -183,6 +183,31 @@ export function moveInMonth(
   );
 }
 
+/**
+ * A pasted copy on `day`: at `minute` with its duration, or at its own hour
+ * without one; an all-day copy keeps its days (RF-58, RF-59).
+ */
+export function placeAt(
+  event: Times,
+  day: string,
+  minute: number | undefined,
+  timeZone: string,
+): Times {
+  if (event.allDay) {
+    return {
+      ...allDayToRange(day, addDays(day, allDayLength(event) - 1)),
+      allDay: true,
+    };
+  }
+  const start = Date.parse(event.startsAt);
+  const at = wallClock(
+    day,
+    clamp(minute ?? minuteOfDay(start, timeZone), 0, DAY_MINUTES - STEP),
+    timeZone,
+  );
+  return timed(at, at + Date.parse(event.endsAt) - start);
+}
+
 export type Nudge = "earlier" | "later" | "previousDay" | "nextDay";
 
 /** Alt + arrows: 15 minutes or a day (RF-64). All-day events only change day. */

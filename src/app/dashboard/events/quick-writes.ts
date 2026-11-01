@@ -32,7 +32,7 @@ export const NOT_FOUND: QuickResult = {
   error: CALENDAR_MESSAGES.notFound,
 };
 
-function readScope(options: ScopeOptions): SeriesScope | null {
+export function readScope(options: ScopeOptions): SeriesScope | null {
   return options.scope && SERIES_SCOPES.includes(options.scope)
     ? options.scope
     : null;

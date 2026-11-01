@@ -6,6 +6,7 @@ import {
   moveInMonth,
   moveTimed,
   nudge,
+  placeAt,
   resizeEnd,
   sameTimes,
   toAllDay,
@@ -231,5 +232,29 @@ describe("describeTimes and sameTimes (RF-8)", () => {
       }),
     ).toBe(true);
     expect(sameTimes(TIMED, ALL_DAY)).toBe(false);
+  });
+});
+
+describe("placeAt (RF-58, RF-59)", () => {
+  it("puts a timed copy at the minute given, with its duration", () => {
+    expect(placeAt(TIMED, "2026-11-20", 16 * 60, TZ)).toEqual({
+      startsAt: "2026-11-20T15:00:00.000Z",
+      endsAt: "2026-11-20T16:00:00.000Z",
+      allDay: false,
+    });
+  });
+
+  it("without a minute keeps the same hour", () => {
+    expect(placeAt(TIMED, "2026-11-20", undefined, TZ)?.startsAt).toBe(
+      "2026-11-20T09:00:00.000Z",
+    );
+  });
+
+  it("an all-day copy keeps its days", () => {
+    expect(placeAt(THREE_DAYS, "2026-11-20", 600, TZ)).toEqual({
+      startsAt: "2026-11-20T00:00:00.000Z",
+      endsAt: "2026-11-23T00:00:00.000Z",
+      allDay: true,
+    });
   });
 });

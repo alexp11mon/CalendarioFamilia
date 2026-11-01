@@ -1349,6 +1349,7 @@ export type Database = {
         Returns: Json
       }
       trash_purge: { Args: never; Returns: undefined }
+      trash_row: { Args: { p_trash_id: string }; Returns: Json }
       trash_scheduled_jobs: {
         Args: never
         Returns: {

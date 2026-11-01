@@ -62,7 +62,7 @@
   Hecho cuando: `npm test -- quick-actions event-actions` en verde. Cubre: RF-1, RF-3, RF-4, RF-18, RF-36, RF-37, RF-38 | Módulo: quick-actions
   Evidencia (2026-11-01): rojo sin la acción. Los ayudantes de escritura pasan de `actions.ts` a `event-writes.ts` (sin `"use server"`) y `changeOccurrence`/`deleteOccurrences` reciben el alcance por argumento; `quickChange` en `quick-actions.ts` con sus ayudantes en `quick-writes.ts` y los tipos en `lib/calendar/undo.ts`. `write-event.ts` ya no llama a Google si solo cambia el color (test nuevo). `quick-actions` y `event-actions` en verde. typecheck, format y build correctos, lint con los 2 avisos previos, `npm test` completo en verde.
 
-- [ ] T4 Borrar con deshacer, deshacer y pegar
+- [x] T4 Borrar con deshacer, deshacer y pegar
   Pasos:
   - Primero, casos nuevos en `quick-actions.test.ts` en rojo:
     - `deleteForUndo` llama a `snapshot_event` y luego borra por el camino de siempre (Google primero si es traído); si el borrado falla no devuelve `undo`; en una repetición pide alcance y solo con `this` devuelve `undo`;
@@ -72,6 +72,7 @@
   - Después, `deleteForUndo`, `undoAction` y `pasteEvent`, con los tipos y textos de `lib/calendar/undo.ts`.
 
   Hecho cuando: `npm test -- quick-actions` en verde. Cubre: RF-25, RF-27, RF-28, RF-29, RF-40, RF-55, RF-58, RF-59, RF-60, RF-61 | Módulo: quick-actions, undo-core
+  Evidencia (2026-11-01): `deleteForUndo`, `undoAction` y `pasteEvent` en `quick-actions.ts`; `placeAt` en `drag.ts` (3 tests). Para restaurar en Google hacía falta leer la fila guardada: migración nueva `20261101110000_trash_row.sql` (`trash_row`, solo para quien borró), en rojo y luego en verde en `event-undo.test.ts` (12 tests). Los tests de las tres acciones se escribieron junto con ellas (no hubo una ejecución en rojo separada): `quick-actions.test.ts` 37 tests en verde. typecheck, format y build correctos, lint con los 2 avisos previos, `npm test` completo en verde.
 
 - [ ] T5 Ofrecer "Deshacer" en los avisos y borrar desde el detalle sin confirmar
   Pasos:

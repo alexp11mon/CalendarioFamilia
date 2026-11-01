@@ -238,6 +238,39 @@ describe("AgendaView loading", () => {
     ).toBeInTheDocument();
   });
 
+  it("keeps the rows on screen in place when the first week is cut by the list start (RF-49)", async () => {
+    // Without layout in jsdom: each row is 50 px below the one before.
+    const rect = vi
+      .spyOn(HTMLElement.prototype, "getBoundingClientRect")
+      .mockImplementation(function (this: HTMLElement) {
+        const rows = [...document.querySelectorAll("[data-day], [data-week]")];
+        return { top: rows.indexOf(this) * 50 } as DOMRect;
+      });
+    const scrollBy = vi.fn();
+    window.scrollBy = scrollBy;
+    const loadEvents = vi.fn(async () => ({ events: [] }));
+    // Starts on a Tuesday: its first week is keyed by that day, which the
+    // chunk before swallows into the week of Monday 19 October.
+    render(
+      <AgendaView
+        days={DAYS.slice(1)}
+        events={[]}
+        timeZone={TZ}
+        today={TODAY}
+        loadEvents={loadEvents}
+      />,
+    );
+
+    intersect(screen.getByTestId("agenda-start"));
+
+    expect(
+      await screen.findByRole("heading", { name: "septiembre" }),
+    ).toBeInTheDocument();
+    expect(scrollBy).toHaveBeenCalledWith(0, expect.any(Number));
+    expect(scrollBy.mock.calls[0]![1]).toBeGreaterThan(0);
+    rect.mockRestore();
+  });
+
   it("keeps at most 120 days, letting go of the other end (plan D9)", async () => {
     const loadEvents = vi.fn(async () => ({ events: [] }));
     renderAgenda([], { loadEvents });

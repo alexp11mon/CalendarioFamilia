@@ -177,7 +177,13 @@ export function AgendaView({
         ...(list.current?.querySelectorAll<HTMLElement>(
           "[data-day], [data-week]",
         ) ?? []),
-      ].find((element) => element.getBoundingClientRect().top >= 0);
+      ].find(
+        (element) =>
+          // The first week is keyed by the list's first day: days loaded
+          // before rename it, so it can't be found again to keep in place.
+          element.dataset.week !== first &&
+          element.getBoundingClientRect().top >= 0,
+      );
       kept.current = row
         ? {
             selector: row.dataset.day
@@ -289,7 +295,7 @@ export function AgendaView({
             <h2
               key={`month-${item.key}`}
               data-month={item.key}
-              className="mt-2 flex h-28 scroll-mt-[calc(4rem+env(safe-area-inset-top))] items-end rounded-3xl bg-agenda-band px-5 pb-4 text-3xl font-bold text-ink first-letter:uppercase max-tab:rounded-none tab:scroll-mt-4"
+              className="mt-2 flex h-28 scroll-mt-[calc(4rem+env(safe-area-inset-top))] items-end rounded-3xl bg-agenda-band px-5 pb-4 text-3xl font-bold text-ink first-letter:uppercase max-tab:rounded-none tab:scroll-mt-40"
             >
               {item.label}
             </h2>
@@ -301,7 +307,7 @@ export function AgendaView({
               key={`week-${item.key}`}
               data-week={item.key}
               data-month={item.key.slice(0, 7)}
-              className="scroll-mt-[calc(4rem+env(safe-area-inset-top))] px-4 pt-5 pb-2 tab:scroll-mt-4"
+              className="scroll-mt-[calc(4rem+env(safe-area-inset-top))] px-4 pt-5 pb-2 tab:scroll-mt-40"
             >
               <p className="pl-14 text-sm font-semibold text-muted">
                 {item.label}
@@ -319,7 +325,7 @@ export function AgendaView({
             data-day={item.key}
             data-month={item.key.slice(0, 7)}
             aria-label={item.isToday ? `${item.label}, hoy` : item.label}
-            className="flex scroll-mt-[calc(4rem+env(safe-area-inset-top))] gap-3 px-4 py-1.5 tab:scroll-mt-4"
+            className="flex scroll-mt-[calc(4rem+env(safe-area-inset-top))] gap-3 px-4 py-1.5 tab:scroll-mt-40"
           >
             {/* The day on the left, today in the accent (RF-52, RF-53). */}
             <div

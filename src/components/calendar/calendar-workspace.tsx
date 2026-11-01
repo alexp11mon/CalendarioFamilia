@@ -565,7 +565,7 @@ export function CalendarWorkspace({
           </div>
         ) : null}
         {/* On a phone the drawer and the header take the panel's place (RF-19). */}
-        <div className="flex flex-col gap-3 max-tab:hidden lg:sticky lg:top-6 lg:w-84 lg:shrink-0">
+        <div className="flex flex-col gap-3 max-tab:hidden lg:sticky lg:top-40 lg:w-84 lg:shrink-0">
           {nextEvents && loadedAt !== undefined ? (
             <NextEventCard
               events={nextEvents}

@@ -207,6 +207,114 @@ describe("syncCalendars", () => {
   });
 });
 
+// Spec 018, T10: an iCloud calendar goes through the same engine (plan D1,
+// D3, D11; RF-15, RF-29 to RF-32, RF-61, RF-63).
+describe("syncCalendars with iCloud", () => {
+  const CALENDAR_URL = "https://p42-caldav.icloud.com/123/calendars/home/";
+  const CREDENTIAL = JSON.stringify({
+    v: 1,
+    username: "ana@icloud.com",
+    password: "abcd-efgh-ijkl-mnop",
+  });
+  const XML = { "Content-Type": "application/xml" };
+  const ICS = [
+    "BEGIN:VCALENDAR",
+    "VERSION:2.0",
+    "BEGIN:VEVENT",
+    "UID:one",
+    "DTSTAMP:20261001T000000Z",
+    "SUMMARY:Dentista",
+    "DTSTART:20261105T090000Z",
+    "DTEND:20261105T100000Z",
+    "END:VEVENT",
+    "END:VCALENDAR",
+  ].join("\r\n");
+  const icloud = {
+    calendar_id: "cal-i",
+    connection_id: "conn-i",
+    provider: "icloud",
+    external_id: CALENDAR_URL,
+  };
+
+  function server(status = 207) {
+    return vi.fn<typeof fetch>(async (input, init) => {
+      const method = init?.method ?? "GET";
+      if (status !== 207) return new Response("", { status });
+      if (String(input).startsWith(CALENDAR_URL) && method === "PROPFIND") {
+        return new Response(
+          `<multistatus xmlns="DAV:"><response><href>/123/calendars/home/</href><propstat><prop><resourcetype><collection/></resourcetype><current-user-privilege-set><privilege><write/></privilege></current-user-privilege-set></prop><status>HTTP/1.1 200 OK</status></propstat></response></multistatus>`,
+          { status: 207, headers: XML },
+        );
+      }
+      return new Response(
+        `<multistatus xmlns="DAV:" xmlns:C="urn:ietf:params:xml:ns:caldav"><response><href>/123/calendars/home/one.ics</href><propstat><prop><getetag>"e1"</getetag><C:calendar-data>${ICS}</C:calendar-data></prop><status>HTTP/1.1 200 OK</status></propstat></response></multistatus>`,
+        { status: 207, headers: XML },
+      );
+    });
+  }
+
+  beforeEach(() => {
+    handlers.sync_get_token = (args) =>
+      args.p_connection_id === "conn-i" ? CREDENTIAL : "rt";
+  });
+
+  it("reads with the stored credential, without renewing any token, and applies", async () => {
+    fetchFn = server();
+
+    const [result] = await syncCalendars([icloud], deps());
+
+    expect(result).toEqual({
+      calendarId: "cal-i",
+      summary: { added: 1, changed: 0, removed: 0 },
+    });
+    expect(fetchFn.mock.calls.map(([url]) => String(url))).not.toContain(
+      TOKEN_URL,
+    );
+    expect(named("sync_apply_events")[0].args).toMatchObject({
+      p_calendar_id: "cal-i",
+      p_access: "owner",
+      p_skipped: 0,
+      p_read_at: "2026-10-27T12:00:00.000Z",
+      p_events: [
+        {
+          external_id: "/123/calendars/home/one.ics",
+          title: "Dentista",
+          starts_at: "2026-11-05T09:00:00.000Z",
+        },
+      ],
+    });
+  });
+
+  it("a refused password stops the updates as a withdrawn permission (RF-61)", async () => {
+    fetchFn = server(401);
+    const [result] = await syncCalendars([icloud], deps());
+    expect(result).toEqual({ calendarId: "cal-i", error: "revoked" });
+    expect(named("sync_fail")[0].args).toMatchObject({ p_kind: "revoked" });
+  });
+
+  it("iCloud not answering is retried later (RF-63)", async () => {
+    fetchFn = server(503);
+    const [result] = await syncCalendars([icloud], deps());
+    expect(result).toEqual({ calendarId: "cal-i", error: "transient" });
+  });
+
+  it("updates Google and iCloud calendars in the same run", async () => {
+    const icloudServer = server();
+    fetchFn = vi.fn<typeof fetch>(async (input, init) => {
+      if (String(input) === TOKEN_URL) return json({ access_token: "at" });
+      if (String(input).startsWith("https://www.googleapis.com/")) {
+        return json({ items: [googleEvent("e1")] });
+      }
+      return icloudServer(input, init);
+    });
+
+    const results = await syncCalendars([calendar(1), icloud], deps());
+
+    expect(results.every((r) => "summary" in r)).toBe(true);
+    expect(named("sync_apply_events")).toHaveLength(2);
+  });
+});
+
 describe("runDue (RF-22, plan D19)", () => {
   it("claims in batches of 4 until nothing is due", async () => {
     const batches = [

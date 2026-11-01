@@ -46,13 +46,31 @@ const THEIRS: CalendarEventItem = {
   endsAt: "2026-11-04T10:00:00.000Z",
 };
 
+const FAIR: CalendarEventItem = {
+  ...MINE,
+  id: "e3",
+  title: "Feria",
+  allDay: true,
+  startsAt: "2026-11-04T00:00:00.000Z",
+  endsAt: "2026-11-05T00:00:00.000Z",
+};
+const TRIP: CalendarEventItem = {
+  ...FAIR,
+  id: "e4",
+  title: "Viaje",
+  startsAt: "2026-11-03T00:00:00.000Z",
+  endsAt: "2026-11-05T00:00:00.000Z",
+};
 const EVENTS = [MINE, THEIRS];
+const WITH_ALL_DAY = [MINE, FAIR, TRIP];
+// Stable per test: a new array on each render would reset the overrides.
+let shownEvents = EVENTS;
 const EDITABLE = new Set(["mine"]);
 const COLORS = new Map<string, string>();
 
 function Harness() {
   const state = useEventInteractionsState({
-    events: EVENTS,
+    events: shownEvents,
     editableCalendarIds: EDITABLE,
     calendarColors: COLORS,
     timeZone: TZ,
@@ -88,7 +106,8 @@ function rect(left: number, top: number, width: number, height: number) {
 let columns: HTMLElement[] = [];
 let scroller: HTMLElement;
 
-function setup() {
+function setup(events = EVENTS) {
+  shownEvents = events;
   render(
     <ToastProvider>
       <Harness />
@@ -109,11 +128,15 @@ function setup() {
   vi.spyOn(scroller, "getBoundingClientRect").mockReturnValue(
     rect(0, 0, 400, 1000),
   );
-  document.elementsFromPoint = (x: number) =>
-    columns.filter((column) => {
-      const box = column.getBoundingClientRect();
-      return x >= box.left && x < box.right;
-    });
+  // Above the grid (y < 0) is the all-day strip, whose cells appear while dragging.
+  document.elementsFromPoint = (x: number, y: number) => {
+    const index = Math.floor((x - COLUMN.left) / COLUMN.width);
+    const day = DAYS[index];
+    if (!day) return [];
+    if (y >= 0) return [columns[index]!];
+    const cell = document.querySelector(`[data-allday-day="${day}"]`);
+    return cell ? [cell] : [];
+  };
 }
 
 const at = (hours: number) => hours * HOUR;
@@ -247,6 +270,68 @@ describe("DraggableEvent", () => {
     move(13, 250);
     await act(async () => up(13, 250));
     expect(theirs).not.toHaveClass("ring-2");
+    expect(h.quickChange).not.toHaveBeenCalled();
+  });
+
+  it("a timed event dropped on the strip turns all day (RF-13)", async () => {
+    setup();
+    down(block("Cena"), 10.25);
+    move(-0.5, 250);
+    expect(
+      document.querySelector('[data-allday-day="2026-11-04"]'),
+    ).not.toBeNull();
+    await act(async () => up(-0.5, 250));
+    expect(h.quickChange).toHaveBeenCalledWith(
+      "e1",
+      {
+        kind: "times",
+        startsAt: "2026-11-04T00:00:00.000Z",
+        endsAt: "2026-11-05T00:00:00.000Z",
+        allDay: true,
+      },
+      {},
+    );
+  });
+
+  it("a one-day all-day event dropped on the grid lasts 1 h from there (RF-14)", async () => {
+    setup(WITH_ALL_DAY);
+    down(block("Feria"), -0.5, 250);
+    move(16, 150);
+    await act(async () => up(16, 150));
+    expect(h.quickChange).toHaveBeenCalledWith(
+      "e3",
+      {
+        kind: "times",
+        startsAt: "2026-11-03T15:00:00.000Z",
+        endsAt: "2026-11-03T16:00:00.000Z",
+        allDay: false,
+      },
+      {},
+    );
+  });
+
+  it("an all-day event moves along the strip keeping its days (RF-15)", async () => {
+    setup(WITH_ALL_DAY);
+    down(block("Viaje"), -0.5, 150);
+    move(-0.5, 250);
+    await act(async () => up(-0.5, 250));
+    expect(h.quickChange).toHaveBeenCalledWith(
+      "e4",
+      {
+        kind: "times",
+        startsAt: "2026-11-04T00:00:00.000Z",
+        endsAt: "2026-11-06T00:00:00.000Z",
+        allDay: true,
+      },
+      {},
+    );
+  });
+
+  it("an event of several days does not turn timed on the grid", async () => {
+    setup(WITH_ALL_DAY);
+    down(block("Viaje"), -0.5, 150);
+    move(12, 150);
+    await act(async () => up(12, 150));
     expect(h.quickChange).not.toHaveBeenCalled();
   });
 

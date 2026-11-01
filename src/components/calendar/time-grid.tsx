@@ -20,7 +20,6 @@ import {
 } from "@/lib/calendar/time-zone";
 import { useNow } from "@/lib/hooks/use-now";
 import { DraggableEvent } from "./draggable-event";
-import { EventBlock } from "./event-block";
 import { ScrollOnMount } from "./scroll-on-mount";
 import { SlotLayer } from "./slot-layer";
 
@@ -134,29 +133,42 @@ export function TimeGrid({
               );
             })}
           </div>
-          {banners.length > 0 ? (
-            // One block per event across its days, in lanes as the month (RF-40).
-            <div
-              data-testid="banner-strip"
-              className="grid gap-y-0.5 border-b border-line py-0.5"
-              style={columns}
-            >
-              <span className="sr-only">Todo el día</span>
-              {banners.map(({ event, start, span, lane }) => (
-                <EventBlock
-                  key={event.id}
-                  event={event}
-                  timeZone={timeZone}
-                  shape="line"
-                  className="mx-0.5 min-w-0"
-                  style={{
-                    gridColumn: `${start + 2} / span ${span}`,
-                    gridRow: lane + 1,
-                  }}
-                />
-              ))}
-            </div>
-          ) : null}
+          {/* One block per event across its days, in lanes as the month (RF-40).
+              Always there, as Google: showing it only while dragging would push
+              the grid down under the pointer (spec 017 RF-13). */}
+          <div
+            data-testid="banner-strip"
+            className="grid min-h-6 gap-y-0.5 border-b border-line py-0.5"
+            style={columns}
+          >
+            <span className="sr-only">Todo el día</span>
+            {days.map((day, index) => (
+              // Behind the blocks: where an event lands on the strip (plan D3).
+              <div
+                key={day}
+                data-allday-day={day}
+                aria-hidden="true"
+                style={{
+                  gridColumn: index + 2,
+                  gridRow: `1 / span ${Math.max(1, ...banners.map((b) => b.lane + 1))}`,
+                }}
+              />
+            ))}
+            {banners.map(({ event, start, span, lane }) => (
+              <DraggableEvent
+                key={event.id}
+                mode="strip"
+                event={event}
+                timeZone={timeZone}
+                shape="line"
+                className="mx-0.5 min-w-0"
+                style={{
+                  gridColumn: `${start + 2} / span ${span}`,
+                  gridRow: lane + 1,
+                }}
+              />
+            ))}
+          </div>
           <ScrollOnMount
             scrollKey={`${days[0]}|${showsToday}`}
             // The current hour less one with today in view, else the morning (RF-45).

@@ -98,12 +98,13 @@
   Hecho cuando: `npm test -- draggable-event time-grid week-view day-view slot-layer` en verde y prueba en `playwright-cli` a 1440 px moviendo, cambiando de día y redimensionando un evento. Cubre: RF-2, RF-5, RF-7, RF-8, RF-9, RF-10, RF-12, RF-19, RF-20, RF-21, RF-23 | Módulo: drag-hook
   Evidencia (2026-11-01): `use-event-drag.ts` (controlador creado una vez, oyentes en `window`, umbral de 4 px, Escape, autodesplazamiento, se traga el clic siguiente, toma la posición del `pointerup`), `DraggableEvent` en `TimeGrid` con tirador inferior, región `aria-live` con las horas nuevas. Desviación de D2: el bloque se vuelve a pintar en su sitio nuevo solo al cambiar de cuarto de hora, sin `transform` en `requestAnimationFrame`. `draggable-event` 8 tests (el rojo destapó que se ignoraba la posición al soltar); `npm test -- draggable-event time-grid week-view day-view slot-layer event-interactions calendar-workspace` 61 en verde; `npm test` completo en verde (la guardia de diseño admite `shadow-float` en el bloque levantado). typecheck, format y build correctos, lint con los 2 avisos previos. `playwright-cli` a 1440 px con `next start`: mover 2 h (12:00 – 13:00 en el bloque), pasar al día siguiente, alargar 1 h, Escape cancela y todo persiste al recargar; capturas del arrastre y del aviso "Evento movido · Deshacer".
 
-- [ ] T8 Pasar eventos entre la franja de día completo y la rejilla
+- [x] T8 Pasar eventos entre la franja de día completo y la rejilla
   Pasos:
   - Primero, casos nuevos en `draggable-event.test.tsx` en rojo: con hora → franja (`data-allday-day`) da día completo de ese día; día completo de un día → rejilla da 1 h; día completo de varios días dentro de la franja cambia de día y conserva su duración; uno de varios días no se convierte en la rejilla.
   - Después, los bloques de la franja como `DraggableEvent` y las celdas con `data-allday-day`.
 
   Hecho cuando: `npm test -- draggable-event time-grid` en verde y prueba en `playwright-cli` a 1440 px de las tres conversiones. Cubre: RF-13, RF-14, RF-15 | Módulo: drag-hook
+  Evidencia (2026-11-01): Bloques de la franja como `DraggableEvent` (modo `strip`) y celdas `data-allday-day` detrás de ellos. La franja se muestra siempre, también vacía (como Google): mostrarla solo al arrastrar empujaba la rejilla 24 px bajo el puntero. 4 casos nuevos en `draggable-event` en rojo y después en verde; `npm test -- draggable-event time-grid` 21 en verde, `npm test` completo 1905 en verde; typecheck, format y build correctos, lint con los 2 avisos previos. `playwright-cli` a 1440 px: con hora → franja del jueves (día completo), día completo de un día → rejilla del viernes (1 h), "Viaje" de 2 días movido dos días conservando su duración, y en la rejilla no se convierte; persiste al recargar.
 
 - [ ] T9 Mover eventos de día en la vista mes
   Pasos:

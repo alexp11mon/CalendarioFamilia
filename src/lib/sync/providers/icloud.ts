@@ -1,7 +1,19 @@
-import { calendarQuery, propfind, type DAVResponse } from "tsdav";
+import {
+  calendarQuery,
+  davRequest,
+  makeCalendar,
+  propfind,
+  type DAVResponse,
+} from "tsdav";
 import type { SyncedEventRow } from "../event-row";
 import { parseCredential, type IcloudCredential } from "../icloud-credentials";
-import { expandObject } from "../icloud-ics";
+import {
+  expandObject,
+  newEventIcs,
+  patchIcs,
+  removeOccurrence,
+  splitExternalId,
+} from "../icloud-ics";
 import {
   ProviderError,
   type FailureKind,
@@ -30,10 +42,13 @@ export function isIcloudUrl(url: URL): boolean {
   );
 }
 
-/** `412`: the resource changed between reading and writing (plan D7). */
-export class PreconditionFailed extends ProviderError {
-  constructor() {
-    super("rejected", "iCloud answered 412");
+/** An error answer, with its status for the move fallback (plan D9, D11). */
+export class IcloudHttpError extends ProviderError {
+  constructor(
+    kind: FailureKind,
+    readonly status: number,
+  ) {
+    super(kind, `iCloud answered ${status}`);
   }
 }
 
@@ -83,11 +98,8 @@ export function icloudFetch(
         url = new URL(location, url);
         continue;
       }
-      if (response.status === 412) throw new PreconditionFailed();
       const failure = failureOf(response.status);
-      if (failure) {
-        throw new ProviderError(failure, `iCloud answered ${response.status}`);
-      }
+      if (failure) throw new IcloudHttpError(failure, response.status);
       return response;
     }
     throw new ProviderError("transient", "Too many redirects");
@@ -198,8 +210,41 @@ function stamp(date: Date): string {
   return `${date.toISOString().slice(0, 19).replace(/[-:]/g, "")}Z`;
 }
 
-function notYet(): never {
-  throw new ProviderError("rejected", "iCloud writes arrive in spec 018 T9");
+const CALENDAR_TYPE = "text/calendar; charset=utf-8";
+
+function statusOf(error: unknown): number | null {
+  return error instanceof IcloudHttpError ? error.status : null;
+}
+
+/** Reads, changes and writes back with If-Match; a 412 reads again once (D7). */
+async function rewrite(
+  davFetch: typeof fetch,
+  url: string,
+  change: (ics: string) => string,
+): Promise<void> {
+  for (let attempt = 0; ; attempt++) {
+    const current = await davFetch(url, { method: "GET" });
+    const etag = current.headers.get("etag");
+    const body = change(await current.text());
+    try {
+      await davFetch(url, {
+        method: "PUT",
+        headers: {
+          "Content-Type": CALENDAR_TYPE,
+          ...(etag && { "If-Match": etag }),
+        },
+        body,
+      });
+      return;
+    } catch (error) {
+      if (statusOf(error) !== 412 || attempt > 0) throw error;
+    }
+  }
+}
+
+/** The resource of an event inside its calendar, kept on iCloud's hosts. */
+function resourceUrl(calendarId: string, href: string): string {
+  return icloudUrl(href, icloudUrl(calendarId, ROOT));
 }
 
 export function icloudSession(
@@ -281,12 +326,102 @@ export function icloudSession(
       return { events, skipped, access };
     },
 
-    insertEvent: notYet,
-    updateEvent: notYet,
-    moveEvent: notYet,
-    deleteEvent: notYet,
-    insertCalendar: notYet,
-    renameCalendar: notYet,
-    deleteCalendar: notYet,
+    async insertEvent(calendarId, event) {
+      const uid = crypto.randomUUID();
+      const url = icloudUrl(`${uid}.ics`, icloudUrl(calendarId, ROOT));
+      await davFetch(url, {
+        method: "PUT",
+        headers: { "Content-Type": CALENDAR_TYPE, "If-None-Match": "*" },
+        body: newEventIcs(uid, event),
+      });
+      return new URL(url).pathname;
+    },
+
+    async updateEvent(calendarId, eventId, before, after) {
+      const { href, recurrenceId } = splitExternalId(eventId);
+      await rewrite(davFetch, resourceUrl(calendarId, href), (ics) =>
+        patchIcs(ics, recurrenceId, before, after),
+      );
+    },
+
+    async moveEvent(calendarId, eventId, destination) {
+      const { href, recurrenceId } = splitExternalId(eventId);
+      if (recurrenceId !== null) {
+        // A repetition lives in its series' resource (plan D9).
+        throw new ProviderError("rejected", "A repetition cannot move alone");
+      }
+      const source = resourceUrl(calendarId, href);
+      const name = source.slice(source.lastIndexOf("/") + 1);
+      const target = icloudUrl(name, icloudUrl(destination, ROOT));
+      try {
+        await davFetch(source, {
+          method: "MOVE",
+          headers: { Destination: target, Overwrite: "F" },
+        });
+      } catch (error) {
+        if (![403, 405, 501, 502].includes(statusOf(error) ?? 0)) throw error;
+        // iCloud without MOVE: copy, then delete the original (plan D9).
+        const ics = await (await davFetch(source, { method: "GET" })).text();
+        await davFetch(target, {
+          method: "PUT",
+          headers: { "Content-Type": CALENDAR_TYPE, "If-None-Match": "*" },
+          body: ics,
+        });
+        await davFetch(source, { method: "DELETE" });
+      }
+      return new URL(target).pathname;
+    },
+
+    async deleteEvent(calendarId, eventId) {
+      const { href, recurrenceId } = splitExternalId(eventId);
+      const url = resourceUrl(calendarId, href);
+      if (recurrenceId === null) {
+        await davFetch(url, { method: "DELETE" });
+        return;
+      }
+      await rewrite(davFetch, url, (ics) =>
+        removeOccurrence(ics, recurrenceId),
+      );
+    },
+
+    async insertCalendar({ name }) {
+      const url = icloudUrl(`${crypto.randomUUID()}/`, await homeUrl());
+      await makeCalendar({
+        url,
+        props: {
+          "d:displayname": name,
+          "c:supported-calendar-component-set": {
+            "c:comp": { _attributes: { name: "VEVENT" } },
+          },
+        },
+        fetch: davFetch,
+      });
+      return url;
+    },
+
+    // RF-52: iCloud may refuse the new name; the 207 says so per property.
+    async renameCalendar(calendarId, name) {
+      const responses = await davRequest({
+        url: icloudUrl(calendarId, ROOT),
+        init: {
+          method: "PROPPATCH",
+          namespace: "d",
+          body: {
+            propertyupdate: {
+              _attributes: { "xmlns:d": "DAV:" },
+              set: { prop: { displayname: name } },
+            },
+          },
+        },
+        fetch: davFetch,
+      });
+      if (responses.some((r) => !r.ok)) {
+        throw new ProviderError("rejected", "iCloud refused the new name");
+      }
+    },
+
+    async deleteCalendar(calendarId) {
+      await davFetch(icloudUrl(calendarId, ROOT), { method: "DELETE" });
+    },
   };
 }

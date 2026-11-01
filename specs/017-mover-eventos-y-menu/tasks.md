@@ -82,12 +82,13 @@
   Hecho cuando: `npm test -- toast event-detail event-modal event-panel` en verde y captura del aviso con "Deshacer" a 390 y 1440 px. Cubre: RF-24, RF-25, RF-26, RF-30, RF-31 | Módulo: toast-undo, undo-core
   Evidencia (2026-11-01): rojo en 5 tests (`toast`, `event-detail`, `event-panel`). `ToastProvider.show(text, { undo })` con 10 s y "Deshacer"; `useUndoToast` llama a `undoAction`; `DeleteEventButton` borra sin confirmar; acción `deleteFromDetail` en las dos rutas del detalle (`deleteEvent` queda solo para sus tests); `finish(done, undo)`. `toast event-detail event-modal event-panel` en verde. typecheck, format y build correctos, lint con los 2 avisos previos, `npm test` completo en verde. La captura del aviso se hizo con las del navegador de T7.
 
-- [ ] T6 Aplicar en el calendario los cambios hechos fuera del formulario
+- [x] T6 Aplicar en el calendario los cambios hechos fuera del formulario
   Pasos:
   - Primero, en rojo: `event-interactions.test.tsx` (con un evento editable y otro no; aplicar un cambio lo pinta en su sitio nuevo al momento y llama a `quickChange`; si falla, vuelve a su sitio y avisa con el motivo; con éxito, aviso con "Deshacer" y `router.refresh()`; un dato del servidor más nuevo sustituye al optimista; `dragging` desactiva deslizar y la ventana rápida) y `series-scope-choice.test.tsx` (los tres alcances, cancelar devuelve `null`, el aviso de pérdidas con "Guardar igualmente"/"Borrar igualmente").
   - Después, el contexto `event-interactions.tsx` en `CalendarWorkspace` y `SeriesScopeChoice`.
 
   Hecho cuando: `npm test -- event-interactions series-scope-choice calendar-workspace` en verde. Cubre: RF-1, RF-2, RF-4, RF-18, RF-21 | Módulo: workspace-interactions, scope-choice
+  Evidencia (2026-11-01): `useEventInteractionsState` y su contexto (`event-interactions.tsx`) en `CalendarWorkspace`: cambios optimistas por id, vuelta atrás con el motivo, aviso con "Deshacer", `dragging` desactiva deslizar y la ventana rápida; `SeriesScopeChoice` fuera de un formulario. Los tests se escribieron junto con el código (sin una ejecución en rojo separada): `event-interactions` 9 tests, `series-scope-choice` 4 y `calendar-workspace` 13 en verde. typecheck, format y build correctos, lint con los 2 avisos previos, `npm test` completo en verde.
 
 - [ ] T7 Mover y redimensionar con el ratón en semana y día
   Pasos:

@@ -8,6 +8,7 @@ import {
   useCallback,
   useEffect,
   useId,
+  useMemo,
   useRef,
   useState,
   ViewTransition,
@@ -50,6 +51,10 @@ import { AgendaView, type AgendaEvent } from "./agenda-view";
 import type { MonthMarks } from "@/lib/calendar/month-marks";
 import { CalendarFilters, type FilterCategory } from "./calendar-filters";
 import { DayView } from "./day-view";
+import {
+  EventInteractionsProvider,
+  useEventInteractionsState,
+} from "./event-interactions";
 import { Fab } from "./fab";
 import type { CalendarOption, EventFormValues } from "./event-form";
 import { MiniMonth } from "./mini-month";
@@ -268,9 +273,32 @@ export function CalendarWorkspace({
           }),
     picker: view === "month" ? "months" : "mini",
   });
-  // Sliding a finger changes the period of the month, the week and the day (RF-25..RF-29).
+  // Moving, recoloring and deleting without the form (spec 017 plan workspace-interactions).
+  const editableIds = useMemo(
+    () => new Set(editableCalendars.map((calendar) => calendar.id)),
+    [editableCalendars],
+  );
+  const calendarColors = useMemo(
+    () =>
+      new Map(
+        initialGroups.flatMap((group) =>
+          group.calendars.map((c) => [c.id, c.color] as const),
+        ),
+      ),
+    [initialGroups],
+  );
+  const interactive = useEventInteractionsState({
+    events,
+    editableCalendarIds: editableIds,
+    calendarColors,
+    timeZone,
+  });
+  const { dragging } = interactive.api;
+
+  // Sliding a finger changes the period of the month, the week and the day
+  // (RF-25..RF-29), never during a drag (spec 017 RF-21).
   const swipe = useSwipe({
-    enabled: view !== "agenda" && draft === null,
+    enabled: view !== "agenda" && draft === null && !dragging,
     onSwipe: (direction) => {
       const delta = direction === "next" ? 1 : -1;
       router.push(calendarHref(view, navigate(view, date, delta)), {
@@ -282,6 +310,7 @@ export function CalendarWorkspace({
   const quickCreate = canCreate && createAction && editableCalendars.length > 0;
 
   function openDraft(next: Draft, at: Box) {
+    if (dragging) return;
     setDraftTitle("");
     setAnchor(at);
     setDraft(next);
@@ -435,7 +464,7 @@ export function CalendarWorkspace({
   const isShown = (event: AgendaEvent) =>
     visibleCalendars.has(event.calendarId) &&
     !(event.categoryId && hiddenCategories.has(event.categoryId));
-  const shown = events.filter(isShown);
+  const shown = interactive.events.filter(isShown);
 
   const colors = Object.fromEntries(
     groups.flatMap((group) => group.calendars.map((c) => [c.id, c.color])),
@@ -481,34 +510,75 @@ export function CalendarWorkspace({
   );
 
   return (
-    <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:gap-8">
-      {filtersInDrawer
-        ? createPortal(
-            <div className="flex flex-col gap-3">
-              <DrawerViews
-                view={view}
-                date={date}
-                saveLastView={saveLastView}
-              />
-              {filters}
-            </div>,
-            filtersInDrawer,
-          )
-        : null}
-      {pickerOpen ? (
-        // Under the phone header; a day of the mini month folds it (RF-20, RF-23, RF-24).
-        <div
-          className="-mx-4 -mt-2 tab:hidden"
-          onClick={(event) => {
-            if ((event.target as Element).closest("a") && view !== "month")
-              setPickerOpen(false);
-          }}
-        >
-          {view === "month" ? (
-            <MonthStrip month={date.slice(0, 7)} />
-          ) : monthMarks && loadMonthMarks ? (
-            <div className="px-4">
+    <EventInteractionsProvider value={interactive.api}>
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:gap-8">
+        {filtersInDrawer
+          ? createPortal(
+              <div className="flex flex-col gap-3">
+                <DrawerViews
+                  view={view}
+                  date={date}
+                  saveLastView={saveLastView}
+                />
+                {filters}
+              </div>,
+              filtersInDrawer,
+            )
+          : null}
+        {pickerOpen ? (
+          // Under the phone header; a day of the mini month folds it (RF-20, RF-23, RF-24).
+          <div
+            className="-mx-4 -mt-2 tab:hidden"
+            onClick={(event) => {
+              if ((event.target as Element).closest("a") && view !== "month")
+                setPickerOpen(false);
+            }}
+          >
+            {view === "month" ? (
+              <MonthStrip month={date.slice(0, 7)} />
+            ) : monthMarks && loadMonthMarks ? (
+              <div className="px-4">
+                <MiniMonth
+                  key={date.slice(0, 7)}
+                  month={date.slice(0, 7)}
+                  today={today}
+                  view={view}
+                  initialMarks={monthMarks}
+                  colors={colors}
+                  visibleCalendarIds={visibleCalendars}
+                  loadMonthMarks={loadMonthMarks}
+                />
+              </div>
+            ) : null}
+          </div>
+        ) : null}
+        {/* On a phone the drawer and the header take the panel's place (RF-19). */}
+        <div className="flex flex-col gap-3 max-tab:hidden lg:sticky lg:top-6 lg:w-84 lg:shrink-0">
+          {nextEvents && loadedAt !== undefined ? (
+            <NextEventCard
+              events={nextEvents}
+              visibleCalendarIds={visibleCalendars}
+              timeZone={timeZone}
+              loadedAt={loadedAt}
+            />
+          ) : null}
+          <button
+            type="button"
+            aria-expanded={panelOpen}
+            aria-controls={panelId}
+            onClick={() => setPanelOpen((open) => !open)}
+            className="inline-flex min-h-11 items-center justify-center rounded-full border border-control bg-paper px-4 text-base font-semibold text-ink transition-colors hover:bg-stone focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink lg:hidden"
+          >
+            Calendarios y filtros
+          </button>
+          <div
+            id={panelId}
+            ref={panel}
+            className={`${panelOpen ? "flex" : "hidden"} flex-col gap-3 lg:flex`}
+          >
+            {monthMarks && loadMonthMarks ? (
               <MiniMonth
+                // A new month in the main view starts the mini month there again.
                 key={date.slice(0, 7)}
                 month={date.slice(0, 7)}
                 today={today}
@@ -518,127 +588,94 @@ export function CalendarWorkspace({
                 visibleCalendarIds={visibleCalendars}
                 loadMonthMarks={loadMonthMarks}
               />
-            </div>
-          ) : null}
+            ) : null}
+            {filtersInDrawer ? null : filters}
+          </div>
         </div>
-      ) : null}
-      {/* On a phone the drawer and the header take the panel's place (RF-19). */}
-      <div className="flex flex-col gap-3 max-tab:hidden lg:sticky lg:top-6 lg:w-84 lg:shrink-0">
-        {nextEvents && loadedAt !== undefined ? (
-          <NextEventCard
-            events={nextEvents}
-            visibleCalendarIds={visibleCalendars}
-            timeZone={timeZone}
-            loadedAt={loadedAt}
+        {/* A new view or date exits the old area and enters the new one in the
+          sense of the change (spec 011 RF-17, RF-18; plan D8). */}
+        <ViewTransition
+          key={`${view}-${date}`}
+          enter={VIEW_MOTION}
+          exit={VIEW_MOTION}
+          update={{ [CAL_FILTER]: CAL_FILTER, default: "none" }}
+          default="none"
+        >
+          <div
+            className={`min-w-0 flex-1 ${view === "agenda" ? "" : "touch-pan-y"}`}
+            {...swipe}
+          >
+            {view === "agenda" ? (
+              <AgendaView
+                days={days}
+                events={interactive.events}
+                isShown={isShown}
+                timeZone={timeZone}
+                today={today}
+                loadEvents={loadAgendaEvents}
+                onMonthChange={onAgendaMonth}
+              />
+            ) : view === "month" ? (
+              <MonthView
+                date={date}
+                days={days}
+                events={shown}
+                timeZone={timeZone}
+                today={today}
+                // A day of the month creates an all-day event (spec 008 RF-19).
+                onCreate={
+                  quickCreate
+                    ? (day, at) =>
+                        openDraft(
+                          {
+                            day,
+                            allDay: true,
+                            startMinute: 540,
+                            endMinute: 600,
+                          },
+                          at,
+                        )
+                    : undefined
+                }
+                draft={draftMark}
+              />
+            ) : view === "week" ? (
+              <WeekView
+                days={days}
+                events={shown}
+                timeZone={timeZone}
+                today={today}
+                onCreate={createInGrid}
+                draft={gridDraft}
+              />
+            ) : (
+              <DayView
+                day={date}
+                events={shown}
+                timeZone={timeZone}
+                today={today}
+                onCreate={createInGrid}
+                draft={gridDraft}
+              />
+            )}
+          </div>
+        </ViewTransition>
+        {canCreate ? <Fab href={`/dashboard/events/new?date=${date}`} /> : null}
+        {draft && quickCreate && defaultCalendarId ? (
+          <QuickCreate
+            // A new slot starts a new window.
+            key={`${draft.day}-${draft.allDay}-${draft.startMinute}-${draft.endMinute}`}
+            draft={draft}
+            anchor={anchor}
+            calendars={editableCalendars}
+            defaultCalendarId={defaultCalendarId}
+            action={createAction}
+            onClose={closeDraft}
+            onTitleChange={setDraftTitle}
           />
         ) : null}
-        <button
-          type="button"
-          aria-expanded={panelOpen}
-          aria-controls={panelId}
-          onClick={() => setPanelOpen((open) => !open)}
-          className="inline-flex min-h-11 items-center justify-center rounded-full border border-control bg-paper px-4 text-base font-semibold text-ink transition-colors hover:bg-stone focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink lg:hidden"
-        >
-          Calendarios y filtros
-        </button>
-        <div
-          id={panelId}
-          ref={panel}
-          className={`${panelOpen ? "flex" : "hidden"} flex-col gap-3 lg:flex`}
-        >
-          {monthMarks && loadMonthMarks ? (
-            <MiniMonth
-              // A new month in the main view starts the mini month there again.
-              key={date.slice(0, 7)}
-              month={date.slice(0, 7)}
-              today={today}
-              view={view}
-              initialMarks={monthMarks}
-              colors={colors}
-              visibleCalendarIds={visibleCalendars}
-              loadMonthMarks={loadMonthMarks}
-            />
-          ) : null}
-          {filtersInDrawer ? null : filters}
-        </div>
+        {interactive.dialog}
       </div>
-      {/* A new view or date exits the old area and enters the new one in the
-          sense of the change (spec 011 RF-17, RF-18; plan D8). */}
-      <ViewTransition
-        key={`${view}-${date}`}
-        enter={VIEW_MOTION}
-        exit={VIEW_MOTION}
-        update={{ [CAL_FILTER]: CAL_FILTER, default: "none" }}
-        default="none"
-      >
-        <div
-          className={`min-w-0 flex-1 ${view === "agenda" ? "" : "touch-pan-y"}`}
-          {...swipe}
-        >
-          {view === "agenda" ? (
-            <AgendaView
-              days={days}
-              events={events}
-              isShown={isShown}
-              timeZone={timeZone}
-              today={today}
-              loadEvents={loadAgendaEvents}
-              onMonthChange={onAgendaMonth}
-            />
-          ) : view === "month" ? (
-            <MonthView
-              date={date}
-              days={days}
-              events={shown}
-              timeZone={timeZone}
-              today={today}
-              // A day of the month creates an all-day event (spec 008 RF-19).
-              onCreate={
-                quickCreate
-                  ? (day, at) =>
-                      openDraft(
-                        { day, allDay: true, startMinute: 540, endMinute: 600 },
-                        at,
-                      )
-                  : undefined
-              }
-              draft={draftMark}
-            />
-          ) : view === "week" ? (
-            <WeekView
-              days={days}
-              events={shown}
-              timeZone={timeZone}
-              today={today}
-              onCreate={createInGrid}
-              draft={gridDraft}
-            />
-          ) : (
-            <DayView
-              day={date}
-              events={shown}
-              timeZone={timeZone}
-              today={today}
-              onCreate={createInGrid}
-              draft={gridDraft}
-            />
-          )}
-        </div>
-      </ViewTransition>
-      {canCreate ? <Fab href={`/dashboard/events/new?date=${date}`} /> : null}
-      {draft && quickCreate && defaultCalendarId ? (
-        <QuickCreate
-          // A new slot starts a new window.
-          key={`${draft.day}-${draft.allDay}-${draft.startMinute}-${draft.endMinute}`}
-          draft={draft}
-          anchor={anchor}
-          calendars={editableCalendars}
-          defaultCalendarId={defaultCalendarId}
-          action={createAction}
-          onClose={closeDraft}
-          onTitleChange={setDraftTitle}
-        />
-      ) : null}
-    </div>
+    </EventInteractionsProvider>
   );
 }

@@ -1,19 +1,16 @@
-import { toGoogleEvent, type WritableEvent } from "./google-payload";
+import type { WritableEvent } from "./google-payload";
 import { MAX_CALENDARS_PER_ACCOUNT } from "./limits";
-import {
-  deleteCalendar,
-  insertCalendar,
-  insertEvent,
-  ProviderError,
-} from "./providers/google";
-import { accessToken, type SyncDeps } from "./run-sync";
+import { openSession } from "./providers";
+import { ProviderError, type ProviderSession } from "./providers/types";
+import type { SyncDeps } from "./run-sync";
 import { planUpload, withOccurrences, type UploadRow } from "./upload-plan";
 import type { CalendarWriteResult } from "./write-calendar";
 import { writeFailureOf } from "./write-errors";
 
-// Copies a normal CaFam calendar to Google and turns it into a synced one
+// Copies a normal CaFam calendar to the provider and turns it into a synced one
 // (plan D14; RF-34 to RF-37, RF-42). CaFam changes only at the end, in one
-// transaction; any failure before deletes what was created in Google.
+// transaction; any failure before deletes what was created in the provider.
+// Since spec 018 the provider is Google or iCloud (RF-55 to RF-60).
 
 const CONCURRENCY = 4;
 /** maxDuration of /upload is 300 s (T1): stop copying with room to clean up. */
@@ -65,7 +62,7 @@ export async function uploadCalendar(
 ): Promise<CalendarWriteResult> {
   const { data: connection } = await deps.supabase
     .from("calendar_connections")
-    .select("status, can_write")
+    .select("status, can_write, provider")
     .eq("id", input.connectionId)
     .maybeSingle();
   if (!connection) return { status: "notFound" };
@@ -82,15 +79,18 @@ export async function uploadCalendar(
   const elapsed = deps.elapsedMs ?? (() => Date.now() - started);
   const now = deps.now?.() ?? new Date();
 
-  let token: string;
+  let session: ProviderSession;
   let externalId: string;
   try {
-    token = await accessToken(deps, input.connectionId);
-    externalId = await insertCalendar(
-      token,
-      { summary: input.name, timeZone: input.timeZone },
-      deps.fetchFn,
+    session = await openSession(
+      deps,
+      connection.provider ?? "google",
+      input.connectionId,
     );
+    externalId = await session.insertCalendar({
+      name: input.name,
+      timeZone: input.timeZone,
+    });
   } catch (error) {
     const failure = writeFailureOf(error);
     return {
@@ -98,8 +98,7 @@ export async function uploadCalendar(
       failure: failure === "gone" ? "rejected" : failure,
     };
   }
-  const undo = () =>
-    deleteCalendar(token, externalId, deps.fetchFn).catch(() => undefined);
+  const undo = () => session.deleteCalendar(externalId).catch(() => undefined);
 
   // A row by its id; an occurrence of a series by its dates (spec 013 RF-30).
   const mapping: Record<string, string>[] = [];
@@ -114,7 +113,7 @@ export async function uploadCalendar(
         }
         const event = next;
         const id = await withRetry(deps, () =>
-          insertEvent(token, externalId, toGoogleEvent(event), deps.fetchFn),
+          session.insertEvent(externalId, event),
         );
         mapping.push(
           event.seriesId

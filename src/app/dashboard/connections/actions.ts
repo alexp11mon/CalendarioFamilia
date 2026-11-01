@@ -39,13 +39,14 @@ const LIMIT = "Puedes traer como máximo 20 calendarios por cuenta.";
 
 type User = Awaited<ReturnType<typeof requireActionUser>>;
 
+/** The provider of the user's own connection, or null if it is not theirs (RLS). */
 async function ownsConnection({ supabase }: User, id: string) {
   const { data } = await supabase
     .from("calendar_connections")
-    .select("id")
+    .select("id, provider")
     .eq("id", id)
     .maybeSingle();
-  return Boolean(data);
+  return data ? (data.provider ?? "google") : null;
 }
 
 /** Text of a finished update: totals and how many calendars failed (RF-23). */
@@ -195,7 +196,8 @@ export async function disconnectAccount(
     return { formError: GONE };
   }
   const user = await requireActionUser();
-  if (!(await ownsConnection(user, connectionId))) return { formError: GONE };
+  const provider = await ownsConnection(user, connectionId);
+  if (!provider) return { formError: GONE };
 
   const decision = formData.get("decision");
   const { data: synced } = await user.supabase
@@ -212,8 +214,8 @@ export async function disconnectAccount(
     };
   }
 
-  // Disconnecting goes on even if Google does not answer (RF-30).
-  await revokeConnection(connectionId).catch(() => undefined);
+  // Disconnecting goes on even if the provider does not answer (RF-30).
+  await revokeConnection(connectionId, provider).catch(() => undefined);
   try {
     const { error } = await user.supabase.rpc("disconnect_account", {
       p_connection_id: connectionId,

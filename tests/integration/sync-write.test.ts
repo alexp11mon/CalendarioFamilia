@@ -161,6 +161,8 @@ describe("sync_write_context (RF-6 to RF-8, RF-20)", () => {
       expect(error).toBeNull();
       expect(data).toEqual({
         synced: true,
+        // Spec 018 T3: the provider, so the server knows whom to write to.
+        provider: "google",
         connection_id: connectionId,
         calendar_external_id: "a@group",
         target_external_id: "b@group",

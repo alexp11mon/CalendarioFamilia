@@ -71,7 +71,7 @@ function form(
 
 beforeEach(() => {
   vi.clearAllMocks();
-  rows.calendar_connections = [{ id: CONNECTION }];
+  rows.calendar_connections = [{ id: CONNECTION, provider: "google" }];
   rows.synced_calendars = [];
   rpc.mockResolvedValue({ data: [], error: null });
   syncConnection.mockResolvedValue({
@@ -223,7 +223,8 @@ describe("disconnectAccount (RF-27 to RF-30)", () => {
 
     await disconnectAccount(CONNECTION, {}, decision("delete"));
 
-    expect(revokeConnection).toHaveBeenCalledWith(CONNECTION);
+    // Spec 018 T3: the provider says how to revoke (Google) or not (iCloud).
+    expect(revokeConnection).toHaveBeenCalledWith(CONNECTION, "google");
     expect(rpcCalls("disconnect_account")[0][1]).toEqual({
       p_connection_id: CONNECTION,
       p_delete: true,

@@ -1,37 +1,29 @@
-import type { SupabaseClient } from "@supabase/supabase-js";
-import type { Database } from "@/types/database";
-import { convertGoogleEvents } from "./google-events";
+import { rpc, type SyncDeps } from "./deps";
 import { limitEvents } from "./limit-events";
+import { openSession } from "./providers";
 import {
-  listEvents,
   ProviderError,
-  refreshAccessToken,
   type FailureKind,
-} from "./providers/google";
+  type ProviderSession,
+} from "./providers/types";
 import type { UpdateSummary } from "./summary";
 import { syncWindow } from "./window";
 
 // The sync engine shared by the hourly run and "Actualizar ahora" (plan D1, D5,
-// D7, D17, D19): renew the token, read, convert, cap and apply. The database
-// writes go through the secret-protected functions of T4 (plan D4).
+// D7, D17, D19): open the connection, read, convert, cap and apply. The database
+// writes go through the secret-protected functions of T4 (plan D4). Since spec
+// 018 the provider (Google or iCloud) sits behind one interface (plan D1).
+
+export { accessToken, type SyncDeps } from "./deps";
 
 const CONCURRENCY = 4;
 const BUDGET_MS = 50_000;
 
-export interface SyncDeps {
-  supabase: SupabaseClient<Database>;
-  secret: string;
-  clientId: string;
-  clientSecret: string;
-  fetchFn?: typeof fetch;
-  now?: () => Date;
-  /** Time spent so far; the run stops claiming after 50 s (plan D19). */
-  elapsedMs?: () => number;
-}
-
 export interface ClaimedCalendar {
   calendar_id: string;
   connection_id: string;
+  /** From sync_claim_*; Google when missing (calendars claimed before spec 018). */
+  provider?: string;
   external_id: string;
 }
 
@@ -39,72 +31,26 @@ export type SyncResult =
   | { calendarId: string; summary: UpdateSummary }
   | { calendarId: string; error: FailureKind };
 
-async function rpc(
-  deps: SyncDeps,
-  fn: string,
-  args: Record<string, unknown>,
-): Promise<unknown> {
-  // One untyped helper for every sync function; each caller casts its result.
-  const { data, error } = await (
-    deps.supabase.rpc as unknown as (
-      fn: string,
-      args: Record<string, unknown>,
-    ) => Promise<{ data: unknown; error: { message: string } | null }>
-  )(fn, args);
-  if (error) throw new Error(error.message);
-  return data;
-}
-
-/** One access token per connection; a rotated refresh token is stored first (R3). */
-export async function accessToken(deps: SyncDeps, connectionId: string) {
-  const refreshToken = (await rpc(deps, "sync_get_token", {
-    p_secret: deps.secret,
-    p_connection_id: connectionId,
-  })) as string | null;
-  if (!refreshToken) throw new ProviderError("revoked", "No token stored");
-
-  const renewed = await refreshAccessToken(
-    {
-      clientId: deps.clientId,
-      clientSecret: deps.clientSecret,
-      refreshToken,
-    },
-    deps.fetchFn,
-  );
-  if (renewed.refreshToken) {
-    await rpc(deps, "sync_store_token", {
-      p_secret: deps.secret,
-      p_connection_id: connectionId,
-      p_token: renewed.refreshToken,
-    });
-  }
-  return renewed.accessToken;
-}
-
 async function syncOne(
   deps: SyncDeps,
   calendar: ClaimedCalendar,
-  token: Promise<string>,
+  session: Promise<ProviderSession>,
 ): Promise<SyncResult> {
   // Taken before reading: CaFam changes after it win (spec 009 RF-27, plan D5).
   const now = deps.now?.() ?? new Date();
   try {
-    const { events: items, accessRole } = await listEvents(
-      await token,
-      calendar.external_id,
-      syncWindow(now),
-      deps.fetchFn,
-    );
-    const converted = convertGoogleEvents(items);
-    const { events, omitted } = limitEvents(converted.events, now);
+    const read = await (
+      await session
+    ).listEvents(calendar.external_id, syncWindow(now));
+    const { events, omitted } = limitEvents(read.events, now);
     const summary = (await rpc(deps, "sync_apply_events", {
       p_secret: deps.secret,
       p_calendar_id: calendar.calendar_id,
       p_events: events,
-      p_skipped: converted.skipped,
+      p_skipped: read.skipped,
       p_omitted: omitted,
       p_read_at: now.toISOString(),
-      p_access: accessRole,
+      p_access: read.access,
     })) as UpdateSummary;
     return { calendarId: calendar.calendar_id, summary };
   } catch (error) {
@@ -126,23 +72,23 @@ export async function syncCalendars(
   calendars: ClaimedCalendar[],
   deps: SyncDeps,
 ): Promise<SyncResult[]> {
-  const tokens = new Map<string, Promise<string>>();
-  const tokenFor = (connectionId: string) => {
-    let token = tokens.get(connectionId);
-    if (!token) {
-      token = accessToken(deps, connectionId);
+  const sessions = new Map<string, Promise<ProviderSession>>();
+  const sessionFor = ({ connection_id, provider }: ClaimedCalendar) => {
+    let session = sessions.get(connection_id);
+    if (!session) {
+      session = openSession(deps, provider ?? "google", connection_id);
       // Handled per calendar in syncOne; this only avoids an unhandled rejection.
-      token.catch(() => undefined);
-      tokens.set(connectionId, token);
+      session.catch(() => undefined);
+      sessions.set(connection_id, session);
     }
-    return token;
+    return session;
   };
 
   const results: SyncResult[] = [];
   const queue = [...calendars];
   const worker = async () => {
     for (let next = queue.shift(); next; next = queue.shift()) {
-      results.push(await syncOne(deps, next, tokenFor(next.connection_id)));
+      results.push(await syncOne(deps, next, sessionFor(next)));
     }
   };
   await Promise.all(Array.from({ length: CONCURRENCY }, worker));

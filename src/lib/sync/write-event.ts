@@ -1,20 +1,12 @@
-import {
-  toGoogleEvent,
-  toGooglePatch,
-  type WritableEvent,
-} from "./google-payload";
-import {
-  deleteEvent,
-  insertEvent,
-  moveEvent,
-  patchEvent,
-} from "./providers/google";
-import { accessToken, type SyncDeps } from "./run-sync";
+import { toGooglePatch, type WritableEvent } from "./google-payload";
+import { openSession } from "./providers";
+import type { SyncDeps } from "./run-sync";
 import { writeFailureOf, type WriteFailure } from "./write-errors";
 
-// Writes an event of a synced calendar: Google first, CaFam after, so CaFam
-// never shows a change Google does not have (plan D3, D4; RF-10 to RF-12,
-// RF-21). Every Google call shares one 9 s deadline (D12, RF-22).
+// Writes an event of a synced calendar: the provider first, CaFam after, so
+// CaFam never shows a change the provider does not have (plan D3, D4; RF-10 to
+// RF-12, RF-21). Every provider call shares one 9 s deadline (D12, RF-22).
+// Since spec 018 the provider is Google or iCloud (plan D1).
 
 const DEADLINE_MS = 9_000;
 
@@ -48,6 +40,8 @@ export type WriteResult =
 
 interface Context {
   synced: boolean;
+  /** Since spec 018; older contexts are Google. */
+  provider?: string;
   connection_id: string;
   calendar_external_id: string;
   target_external_id: string;
@@ -127,45 +121,44 @@ export async function writeEvent(
 
   const { fetchFn, done } = withDeadline(deps.fetchFn);
   try {
-    const token = await accessToken(
+    const session = await openSession(
       { ...deps, fetchFn },
+      context.provider ?? "google",
       context.connection_id,
     );
     const source = context.calendar_external_id;
 
     if (request.op === "create") {
-      const id = await insertEvent(
-        token,
-        source,
-        toGoogleEvent(request.row),
-        fetchFn,
-      );
+      const id = await session.insertEvent(source, request.row);
       return commit("insert", null, id);
     }
 
     const eventExternal = context.event_external_id!;
     if (request.op === "update") {
       // Patch before moving: if the move fails, the next sync brings the change (D7).
-      await patchEvent(
-        token,
+      await session.updateEvent(
         source,
         eventExternal,
-        toGooglePatch(request.before, request.row),
-        fetchFn,
+        request.before,
+        request.row,
       );
       if (context.target_external_id !== source) {
-        await moveEvent(
-          token,
+        const moved = await session.moveEvent(
           source,
           eventExternal,
           context.target_external_id,
-          fetchFn,
+        );
+        // iCloud gives the event a new id in the destination (spec 018 D9).
+        return commit(
+          "update",
+          request.eventId,
+          moved === eventExternal ? null : moved,
         );
       }
       return commit("update", request.eventId, null);
     }
 
-    await deleteEvent(token, source, eventExternal, fetchFn);
+    await session.deleteEvent(source, eventExternal);
     return commit("delete", request.eventId, null);
   } catch (error) {
     const failure = writeFailureOf(error);

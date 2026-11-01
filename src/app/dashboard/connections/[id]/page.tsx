@@ -39,9 +39,10 @@ export const maxDuration = 60;
 /** Google's current list, or the reason it could not be read (RF-12, RF-31). */
 async function readGoogleList(
   connectionId: string,
+  provider: string,
 ): Promise<{ list: ProviderCalendar[] } | { error: string }> {
   try {
-    return { list: await providerCalendars(connectionId) };
+    return { list: await providerCalendars(connectionId, provider) };
   } catch (error) {
     return {
       error:
@@ -70,7 +71,7 @@ async function ConnectionDetail({
     getSyncedCalendars(supabase, id),
     getProfileTimeZone(supabase, userId),
     connection.status === "active"
-      ? readGoogleList(id)
+      ? readGoogleList(id, connection.provider)
       : Promise.resolve({ error: SYNC_ERRORS.revoked }),
   ]);
   const syncedIds = new Set(synced.map((c) => c.externalId));

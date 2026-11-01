@@ -1,14 +1,12 @@
 import { MAX_CALENDARS_PER_ACCOUNT } from "./limits";
-import {
-  deleteCalendar,
-  insertCalendar,
-  patchCalendar,
-} from "./providers/google";
-import { accessToken, type SyncDeps } from "./run-sync";
+import { openSession } from "./providers";
+import type { ProviderSession } from "./providers/types";
+import type { SyncDeps } from "./run-sync";
 import { writeFailureOf, type WriteFailure } from "./write-errors";
 
-// Calendars in Google from CaFam: renaming a synced one and creating a new one
-// (plan D13, D15; RF-29 to RF-33). Google first, CaFam after, as with events.
+// Calendars in the provider from CaFam: renaming a synced one and creating a
+// new one (plan D13, D15; RF-29 to RF-33). The provider first, CaFam after, as
+// with events. Since spec 018 the provider is Google or iCloud (RF-52, RF-54).
 
 export type CalendarWriteResult =
   | { status: "normal" }
@@ -54,7 +52,7 @@ export async function renameSyncedCalendar(
 ): Promise<CalendarWriteResult> {
   const { data: synced, error } = await deps.supabase
     .from("synced_calendars")
-    .select("connection_id, external_id, can_write")
+    .select("connection_id, external_id, can_write, provider")
     .eq("calendar_id", input.calendarId)
     .maybeSingle();
   if (error) return { status: "dbError", error };
@@ -74,8 +72,12 @@ export async function renameSyncedCalendar(
   }
 
   try {
-    const token = await accessToken(deps, synced.connection_id);
-    await patchCalendar(token, synced.external_id, input.name, deps.fetchFn);
+    const session = await openSession(
+      deps,
+      synced.provider ?? "google",
+      synced.connection_id,
+    );
+    await session.renameCalendar(synced.external_id, input.name);
   } catch (error) {
     return failed(error);
   }
@@ -99,7 +101,7 @@ export async function createSyncedCalendar(
   // RLS shows only the user's own connections.
   const { data: connection } = await deps.supabase
     .from("calendar_connections")
-    .select("status, can_write")
+    .select("status, can_write, provider")
     .eq("id", input.connectionId)
     .maybeSingle();
   if (!connection) return { status: "notFound" };
@@ -112,15 +114,18 @@ export async function createSyncedCalendar(
     .eq("connection_id", input.connectionId);
   if ((count ?? 0) >= MAX_CALENDARS_PER_ACCOUNT) return { status: "limit" };
 
-  let token: string;
+  let session: ProviderSession;
   let externalId: string;
   try {
-    token = await accessToken(deps, input.connectionId);
-    externalId = await insertCalendar(
-      token,
-      { summary: input.name, timeZone: input.timeZone },
-      deps.fetchFn,
+    session = await openSession(
+      deps,
+      connection.provider ?? "google",
+      input.connectionId,
     );
+    externalId = await session.insertCalendar({
+      name: input.name,
+      timeZone: input.timeZone,
+    });
   } catch (error) {
     return failed(error);
   }
@@ -132,9 +137,7 @@ export async function createSyncedCalendar(
   });
   if (error) {
     // Undo it: nothing in Google that CaFam does not show (D15).
-    await deleteCalendar(token, externalId, deps.fetchFn).catch(
-      () => undefined,
-    );
+    await session.deleteCalendar(externalId).catch(() => undefined);
     const code = (error as { code?: unknown }).code;
     return code === "CF429"
       ? { status: "limit" }

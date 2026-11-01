@@ -10,12 +10,14 @@ import { NAV_ITEMS } from "@/lib/shell/nav";
 const CONNECTIONS = [
   {
     id: "c1",
+    provider: "google" as const,
     email: "ana@gmail.com",
     status: "active" as const,
     canWrite: true,
   },
   {
     id: "c2",
+    provider: "google" as const,
     email: "ana.trabajo@gmail.com",
     status: "needs_reauth" as const,
     canWrite: true,

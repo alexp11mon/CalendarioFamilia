@@ -1,13 +1,9 @@
 import { createClient } from "@supabase/supabase-js";
 import { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from "@/lib/supabase/env";
 import type { Database } from "@/types/database";
+import { openSession, revokeAccess } from "./providers";
+import type { ProviderCalendar } from "./providers/types";
 import {
-  listCalendars,
-  revokeToken,
-  type ProviderCalendar,
-} from "./providers/google";
-import {
-  accessToken,
   syncCalendars,
   type ClaimedCalendar,
   type SyncDeps,
@@ -71,17 +67,17 @@ export async function syncConnection(
 }
 
 /**
- * The account's calendars, read from Google on every visit (RF-9, RF-12). Their
- * access is stored too, so a reconnected account writes at once (spec 009 RF-4).
+ * The account's calendars, read from the provider on every visit (RF-9, RF-12).
+ * Their access is stored too, so a reconnected account writes at once (spec 009
+ * RF-4; spec 018 RF-13, RF-17, RF-20).
  */
 export async function providerCalendars(
   connectionId: string,
+  provider: string,
 ): Promise<ProviderCalendar[]> {
   const deps = engineDeps();
-  const list = await listCalendars(
-    await accessToken(deps, connectionId),
-    deps.fetchFn,
-  );
+  const session = await openSession(deps, provider, connectionId);
+  const list = await session.listCalendars();
   await deps.supabase.rpc("sync_set_access", {
     p_secret: deps.secret,
     p_connection_id: connectionId,
@@ -90,12 +86,10 @@ export async function providerCalendars(
   return list;
 }
 
-/** Withdraws CaFam's access in Google before disconnecting (RF-30). */
-export async function revokeConnection(connectionId: string): Promise<void> {
-  const deps = engineDeps();
-  const { data } = await deps.supabase.rpc("sync_get_token", {
-    p_secret: deps.secret,
-    p_connection_id: connectionId,
-  });
-  if (typeof data === "string" && data) await revokeToken(data, deps.fetchFn);
+/** Withdraws CaFam's access in the provider before disconnecting (RF-30; spec 018 RF-67). */
+export async function revokeConnection(
+  connectionId: string,
+  provider: string,
+): Promise<void> {
+  await revokeAccess(engineDeps(), provider, connectionId);
 }

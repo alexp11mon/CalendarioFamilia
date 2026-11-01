@@ -1,6 +1,12 @@
 import type { GoogleEvent } from "../google-events";
 import { MAX_FETCHED_EVENTS } from "../limits";
 import { GOOGLE_SCOPES } from "../scopes";
+import {
+  ProviderError,
+  type FailureKind,
+  type ProviderAccess,
+  type ProviderCalendar,
+} from "./types";
 
 // Google OAuth and Calendar API with plain fetch (spec 007; plan D8 to D10).
 // `fetch` comes in as a parameter so tests run without the network.
@@ -12,31 +18,17 @@ const TOKEN_URL = "https://oauth2.googleapis.com/token";
 const REVOKE_URL = "https://oauth2.googleapis.com/revoke";
 const API = "https://www.googleapis.com/calendar/v3";
 
-/** `rejected`: Google refused a write (spec 009 RF-24). */
-export type FailureKind = "revoked" | "missing" | "transient" | "rejected";
-
-/** A provider failure, already classified for `sync_fail` (RF-13, RF-31, RF-33). */
-export class ProviderError extends Error {
-  constructor(
-    readonly kind: FailureKind,
-    message: string,
-  ) {
-    super(message);
-    this.name = "ProviderError";
-  }
-}
+// Shared with iCloud since spec 018 (plan D1); re-exported for existing callers.
+export {
+  ProviderError,
+  type FailureKind,
+  type ProviderCalendar,
+} from "./types";
 
 export interface ClientConfig {
   clientId: string;
   clientSecret: string;
   redirectUri: string;
-}
-
-export interface ProviderCalendar {
-  id: string;
-  name: string;
-  color: string | null;
-  access: GoogleAccess | null;
 }
 
 // Google answers usage limits with 403 or 429: wait and retry (spec 009 RF-22).
@@ -224,7 +216,7 @@ export async function listCalendars(
 }
 
 /** What the account may do in a calendar; only owner and writer write (spec 009 RF-8). */
-export type GoogleAccess = "owner" | "writer" | "reader";
+export type GoogleAccess = ProviderAccess;
 
 /** freeBusyReader sees less than a reader: both are read-only in CaFam. */
 export function accessOf(role: unknown): GoogleAccess | null {

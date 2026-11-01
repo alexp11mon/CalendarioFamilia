@@ -30,7 +30,8 @@ export function ScrollOnMount({
   }, [scrollKey]);
 
   return (
-    <div ref={ref} className={className}>
+    // The grid scrolls by itself near its edges while dragging (spec 017 RF-9).
+    <div ref={ref} className={className} data-grid-scroll="">
       {children}
     </div>
   );

@@ -8,6 +8,7 @@ import {
   useMemo,
   useRef,
   useState,
+  type PointerEvent,
   type ReactNode,
 } from "react";
 import {
@@ -24,9 +25,11 @@ import {
   type ScopeRequest,
 } from "@/components/recurrence/series-scope-choice";
 import { useToast } from "@/components/ui/toast";
+import { describeTimes, type Times } from "@/lib/calendar/drag";
 import type { CalendarEventItem } from "@/lib/calendar/layout";
 import { DEFAULT_CALENDAR_COLOR } from "@/lib/calendar/palette";
 import { UNDO_NOTICES, type Change } from "@/lib/calendar/undo";
+import { useEventDrag, type DragMode } from "@/lib/hooks/use-event-drag";
 import { useUndoToast } from "./use-undo-toast";
 
 export type ChangeNotice = "moved" | "resized" | "color";
@@ -38,6 +41,14 @@ export interface EventInteractionsApi {
   /** A drag is on: no swiping and no quick window (RF-21). */
   dragging: boolean;
   setDragging: (value: boolean) => void;
+  /** The event being dragged, drawn lifted (RF-8). */
+  draggingId: string | null;
+  /** Presses an event: a drag starts once it moves (RF-5, RF-10). */
+  startDrag: (
+    event: CalendarEventItem,
+    pointer: PointerEvent,
+    options: { mode: DragMode; resize?: boolean },
+  ) => void;
   change: (
     event: CalendarEventItem,
     change: Change,
@@ -94,6 +105,10 @@ export function useEventInteractionsState<T extends CalendarEventItem>({
   const { show } = useToast();
   const showUndo = useUndoToast();
   const [dragging, setDragging] = useState(false);
+  const [draggingId, setDraggingId] = useState<string | null>(null);
+  const [preview, setPreview] = useState<{ id: string; times: Times } | null>(
+    null,
+  );
   const [overrides, setOverrides] = useState<ReadonlyMap<string, Override>>(
     () => new Map(),
   );
@@ -174,19 +189,44 @@ export function useEventInteractionsState<T extends CalendarEventItem>({
     [router, setOverride, show, showUndo],
   );
 
+  const change = useCallback(
+    async (event: CalendarEventItem, change: Change, notice: ChangeNotice) => {
+      setOverride(event.id, { change, pending: true });
+      const result = await run(event, "save", (options) =>
+        quickChange(event.id, change, options),
+      );
+      settle(event, result, UNDO_NOTICES[notice]);
+    },
+    [run, setOverride, settle],
+  );
+
+  const drag = useEventDrag({
+    timeZone,
+    preview: (event, times) =>
+      setPreview(times ? { id: event.id, times } : null),
+    drop: (event, times, resized) => {
+      setPreview(null);
+      void change(
+        event,
+        { kind: "times", ...times },
+        resized ? "resized" : "moved",
+      );
+    },
+    setDragging: (event) => {
+      setDragging(event !== null);
+      setDraggingId(event?.id ?? null);
+    },
+  });
+
   const api = useMemo<EventInteractionsApi>(
     () => ({
       timeZone,
       canEdit: (event) => editableCalendarIds.has(event.calendarId),
       dragging,
       setDragging,
-      change: async (event, change, notice) => {
-        setOverride(event.id, { change, pending: true });
-        const result = await run(event, "save", (options) =>
-          quickChange(event.id, change, options),
-        );
-        settle(event, result, UNDO_NOTICES[notice]);
-      },
+      draggingId,
+      startDrag: drag.start,
+      change,
       remove: async (event) => {
         setOverride(event.id, { change: "deleted", pending: true });
         const result = await run(event, "delete", (options) =>
@@ -195,12 +235,23 @@ export function useEventInteractionsState<T extends CalendarEventItem>({
         settle(event, result, UNDO_NOTICES.deleted);
       },
     }),
-    [dragging, editableCalendarIds, run, setOverride, settle, timeZone],
+    [
+      change,
+      drag.start,
+      dragging,
+      draggingId,
+      editableCalendarIds,
+      run,
+      setOverride,
+      settle,
+      timeZone,
+    ],
   );
 
   const shown = useMemo(
     () =>
       events.flatMap((event) => {
+        if (preview?.id === event.id) return [{ ...event, ...preview.times }];
         const override = overrides.get(event.id);
         if (!override) return [event];
         if (override.change === "deleted") return [];
@@ -212,20 +263,28 @@ export function useEventInteractionsState<T extends CalendarEventItem>({
           ),
         ];
       }),
-    [calendarColors, events, overrides],
+    [calendarColors, events, overrides, preview],
   );
 
-  // Mounted only while asking: the dialog opens on mount and closes on unmount.
-  const dialog = scopeRequest ? (
-    <SeriesScopeChoice
-      request={scopeRequest}
-      onAnswer={(value) => {
-        setScopeRequest(null);
-        answer.current?.(value);
-        answer.current = null;
-      }}
-    />
-  ) : null;
+  const dialog = (
+    <>
+      {/* The new hours of a dragged event, read as they change (plan D2). */}
+      <p role="status" aria-live="polite" className="sr-only">
+        {preview ? describeTimes(preview.times, timeZone) : ""}
+      </p>
+      {/* Mounted only while asking: the dialog opens on mount and closes on unmount. */}
+      {scopeRequest ? (
+        <SeriesScopeChoice
+          request={scopeRequest}
+          onAnswer={(value) => {
+            setScopeRequest(null);
+            answer.current?.(value);
+            answer.current = null;
+          }}
+        />
+      ) : null}
+    </>
+  );
 
   return { api, events: shown, dialog };
 }

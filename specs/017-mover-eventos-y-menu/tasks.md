@@ -90,12 +90,13 @@
   Hecho cuando: `npm test -- event-interactions series-scope-choice calendar-workspace` en verde. Cubre: RF-1, RF-2, RF-4, RF-18, RF-21 | Módulo: workspace-interactions, scope-choice
   Evidencia (2026-11-01): `useEventInteractionsState` y su contexto (`event-interactions.tsx`) en `CalendarWorkspace`: cambios optimistas por id, vuelta atrás con el motivo, aviso con "Deshacer", `dragging` desactiva deslizar y la ventana rápida; `SeriesScopeChoice` fuera de un formulario. Los tests se escribieron junto con el código (sin una ejecución en rojo separada): `event-interactions` 9 tests, `series-scope-choice` 4 y `calendar-workspace` 13 en verde. typecheck, format y build correctos, lint con los 2 avisos previos, `npm test` completo en verde.
 
-- [ ] T7 Mover y redimensionar con el ratón en semana y día
+- [x] T7 Mover y redimensionar con el ratón en semana y día
   Pasos:
   - Primero, `draggable-event.test.tsx` en rojo (con `getBoundingClientRect` y `elementFromPoint` simulados): un evento editable se levanta tras 4 px, muestra sus horas nuevas, cambia de día en la semana, se suelta y llama al contexto con el cambio de `drag.ts`; soltar en el mismo sitio o fuera de la rejilla no guarda; Escape cancela; el borde inferior cambia el fin; el clic tras arrastrar no abre el detalle; un evento no editable es un enlace normal; arrastrar en un hueco sigue creando; la región `aria-live` anuncia la hora; cerca del borde la rejilla se desplaza.
   - Después, `use-event-drag.ts` y `DraggableEvent` en `TimeGrid` (`transform` en `requestAnimationFrame`, D2).
 
   Hecho cuando: `npm test -- draggable-event time-grid week-view day-view slot-layer` en verde y prueba en `playwright-cli` a 1440 px moviendo, cambiando de día y redimensionando un evento. Cubre: RF-2, RF-5, RF-7, RF-8, RF-9, RF-10, RF-12, RF-19, RF-20, RF-21, RF-23 | Módulo: drag-hook
+  Evidencia (2026-11-01): `use-event-drag.ts` (controlador creado una vez, oyentes en `window`, umbral de 4 px, Escape, autodesplazamiento, se traga el clic siguiente, toma la posición del `pointerup`), `DraggableEvent` en `TimeGrid` con tirador inferior, región `aria-live` con las horas nuevas. Desviación de D2: el bloque se vuelve a pintar en su sitio nuevo solo al cambiar de cuarto de hora, sin `transform` en `requestAnimationFrame`. `draggable-event` 8 tests (el rojo destapó que se ignoraba la posición al soltar); `npm test -- draggable-event time-grid week-view day-view slot-layer event-interactions calendar-workspace` 61 en verde; `npm test` completo en verde (la guardia de diseño admite `shadow-float` en el bloque levantado). typecheck, format y build correctos, lint con los 2 avisos previos. `playwright-cli` a 1440 px con `next start`: mover 2 h (12:00 – 13:00 en el bloque), pasar al día siguiente, alargar 1 h, Escape cancela y todo persiste al recargar; capturas del arrastre y del aviso "Evento movido · Deshacer".
 
 - [ ] T8 Pasar eventos entre la franja de día completo y la rejilla
   Pasos:

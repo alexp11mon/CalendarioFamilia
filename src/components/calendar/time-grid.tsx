@@ -13,8 +13,13 @@ import type { Box } from "@/lib/calendar/popover";
 import { calendarHref } from "@/lib/calendar/ranges";
 import type { MinuteRange } from "@/lib/calendar/slots";
 import { fromMinutes } from "@/lib/calendar/time-options";
-import { utcToZonedParts, weekdayIndex } from "@/lib/calendar/time-zone";
+import {
+  utcToZonedParts,
+  weekdayIndex,
+  zonedDateKey,
+} from "@/lib/calendar/time-zone";
 import { useNow } from "@/lib/hooks/use-now";
+import { DraggableEvent } from "./draggable-event";
 import { EventBlock } from "./event-block";
 import { ScrollOnMount } from "./scroll-on-mount";
 import { SlotLayer } from "./slot-layer";
@@ -182,6 +187,7 @@ export function TimeGrid({
                 <div
                   key={day}
                   data-day={day}
+                  data-time-col=""
                   className="relative border-l border-line"
                   style={{ height: 24 * HOUR_PX }}
                 >
@@ -222,8 +228,16 @@ export function TimeGrid({
                   {layoutTimedDay(events, day, timeZone).map((slot) => {
                     const width = 100 / slot.columns;
                     return (
-                      <EventBlock
+                      <DraggableEvent
                         key={slot.event.id}
+                        mode="grid"
+                        // Its bottom edge is where it ends (RF-10).
+                        resizable={
+                          zonedDateKey(
+                            Date.parse(slot.event.endsAt) - 1,
+                            timeZone,
+                          ) === day
+                        }
                         event={slot.event}
                         timeZone={timeZone}
                         shape="grid"

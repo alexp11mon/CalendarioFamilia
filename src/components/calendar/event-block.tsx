@@ -1,5 +1,5 @@
 import Link from "next/link";
-import type { CSSProperties } from "react";
+import type { ComponentProps, CSSProperties, ReactNode } from "react";
 import type { CalendarEventItem } from "@/lib/calendar/layout";
 import { formatTime } from "@/lib/calendar/time-zone";
 import { CommentIcon, ImageIcon, RepeatIcon } from "@/components/shell/icons";
@@ -88,6 +88,8 @@ export function EventBlock({
   icons = true,
   style,
   className = "",
+  anchor,
+  children,
 }: {
   event: CalendarEventItem;
   timeZone: string;
@@ -98,11 +100,16 @@ export function EventBlock({
   icons?: boolean;
   style?: CSSProperties;
   className?: string;
+  /** Handlers of a draggable event (spec 017 plan drag-hook). */
+  anchor?: Omit<ComponentProps<"a">, "href" | "style" | "className">;
+  /** Drawn after the text: the resize handle and the hours while dragging. */
+  children?: ReactNode;
 }) {
   const time = event.allDay ? null : formatTime(event.startsAt, timeZone);
 
   return (
     <Link
+      {...anchor}
       href={`/dashboard/events/${event.id}`}
       style={{ ...style, backgroundColor: event.color }}
       className={`${SHAPES[shape]} text-pastel-ink ring-1 ring-pastel-ink/15 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ink ${className}`}
@@ -131,6 +138,7 @@ export function EventBlock({
           ) : null}
         </>
       )}
+      {children}
     </Link>
   );
 }

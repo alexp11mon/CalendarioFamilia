@@ -35,7 +35,7 @@
   Hecho cuando: `npm run test:db -- event-undo event-images schema` en verde y `src/types/database.ts` con la tabla y las funciones nuevas. Cubre: RF-25, RF-28, RF-29, RF-30 | Módulo: undo-schema
   Evidencia (2026-11-01): rojo antes de la migración (10 de 11 tests). Migración `20261101100000_event_undo.sql` aplicada en dev y tipos regenerados. `test:db -- event-undo event-images schema` 79 tests en verde. typecheck, format y build correctos, lint con los 2 avisos previos, `npm test` 1812 tests.
 
-- [ ] T2 Calcular dónde cae un evento arrastrado
+- [x] T2 Calcular dónde cae un evento arrastrado
   Pasos:
   - Primero, `tests/unit/drag.test.ts` en rojo con los casos de `lib/calendar/drag.ts`:
     - mover un evento con hora en pasos de 15 min conservando la duración, también a otro día de la semana y con varios días;
@@ -47,6 +47,7 @@
   - Después, `drag.ts`.
 
   Hecho cuando: `npm test -- drag` en verde. Cubre: RF-5, RF-7, RF-8, RF-10, RF-12, RF-13, RF-14, RF-15, RF-16, RF-17, RF-19, RF-64 | Módulo: drag-core
+  Evidencia (2026-11-01): rojo sin el módulo. `drag.test.ts` 23 tests en verde (cuartos, días, varios días, fin mínimo, medianoche, conversiones, mes, Alt+flechas, cambio de hora y texto). typecheck, format y build correctos, lint con los 2 avisos previos, `npm test` 1835 tests.
 
 - [ ] T3 Cambiar las horas o el color de un evento sin el formulario
   Pasos:

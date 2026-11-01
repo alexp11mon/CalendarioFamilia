@@ -241,16 +241,27 @@ Si algo de (e) a (g) no funciona como se espera, se vuelve al usuario antes de l
 ### Resultado de la T1 (2026-11-01)
 
 - `tsdav@2.5.0` instalada con versión exacta. Carga en Node 24 (`createAccount`, `fetchCalendars`, `fetchCalendarObjects`, `makeCalendar` y `davRequest`) y admite un `fetch` inyectado en cada llamada.
-- El script de las comprobaciones (a) a (i) está en `specs/018-sincronizacion-icloud/icloud-check.mjs`. Lee las credenciales de `.env.local` y no las imprime; solo crea y borra dos calendarios "CaFam prueba T1". **Pendiente de que el usuario lo ejecute** con una cuenta real (`node specs/018-sincronizacion-icloud/icloud-check.mjs` desde la raíz del proyecto) y se anote aquí su salida.
+- El script de las comprobaciones (a) a (i) está en `specs/018-sincronizacion-icloud/icloud-check.mjs`. Lee las credenciales de `.env.local` y no las imprime; solo crea y borra dos calendarios "CaFam prueba T1". El usuario lo ejecutó con su cuenta real el 2026-11-01 (38 peticiones, sin credenciales en la salida).
 - Decisión del usuario (2026-11-01): hacer todas las tareas posibles sin esperar. Para que el resultado de la cuenta real no obligue a cambiar el código:
   - D9: `moveEvent` intenta `MOVE` y, si iCloud responde `403`, `405`, `501` o `502`, hace `PUT` en el destino y `DELETE` en el origen.
   - D14: renombrar usa `PROPPATCH`; si iCloud lo rechaza, RF-52 ya obliga a no guardarlo y explicarlo. Solo si la comprobación (g) confirma que nunca se puede, se deshabilita el campo.
   - (b): la contraseña se normaliza a la forma con guiones que muestra Apple (`xxxx-xxxx-xxxx-xxxx`).
   - (a): hosts permitidos `caldav.icloud.com` y `p<número>-caldav.icloud.com`, según las guías consultadas.
 
+- Salida de la cuenta real (2026-11-01). Todo como esperaba el plan; no cambia código:
+  - (a) Empieza en `caldav.icloud.com`, sin redirecciones HTTP; el `calendar-home-set` está en `p131-caldav.icloud.com`. Los dos entran en la lista de D10.
+  - (b) Con guiones `207`, sin guiones `207`, **con espacios `401`**. La normalización a guiones de `icloud-credentials` es la correcta (también convierte los espacios).
+  - (c) 4 colecciones: 2 con `VEVENT` (`home`, `work`) y 2 solo con `VTODO` (Recordatorios), que CaFam no ofrece. Colores `#RRGGBBAA`. Privilegios vistos: `read`, `write`, `write-properties`, `write-content`, `bind`, `unbind`. No hay calendarios compartidos por otra persona en la cuenta (aceptado).
+  - (d) `calendar-query` con `time-range` devuelve la serie que empezó antes de la ventana.
+  - (e) `PUT` nuevo `201` con ETag; `PUT If-Match` `204`; con ETag viejo `412`; la `VALARM` se conserva; la serie con `RECURRENCE-ID` y `EXDATE` se guarda (`204`) y iCloud conserva los dos; `DELETE If-Match` `204` y `GET` después `404`.
+  - (f) `MOVE` entre calendarios `201` y el evento está en el destino: D9 usa `MOVE` (el respaldo copiar + borrar queda para otros errores).
+  - (g) `MKCALENDAR` `201`, `PROPPATCH displayname` `207` con `200` dentro y el nombre cambia, `DELETE` de la colección `204`: D14 **mantiene el renombrado**, no se deshabilita.
+  - (h) Contraseña incorrecta: `401` → `revoked`.
+  - (i) Calendario más grande leído en 244 ms con 1 petición (cuenta con pocos eventos); el script entero, 38 peticiones. Sin indicio del riesgo R2.
+
 ## Pasos de producción (los ejecuta el usuario)
 
-1. Migración a prod: `npx supabase link --project-ref yznbdoskvtxeasujtirk`, `npx supabase db push` y `npx supabase link --project-ref uthubyzhonrtrmbcqcjh` (volver a dev). Aplica `icloud_provider`.
+1. Migración a prod: `npx supabase link --project-ref yznbdoskvtxeasujtirk`, `npx supabase db push` y `npx supabase link --project-ref uthubyzhonrtrmbcqcjh` (volver a dev). Aplica `icloud_provider` y `sync_write_context_provider`.
 2. Desplegar: `git push origin 018-sincronizacion-icloud` y después `git checkout main && git merge --ff-only 018-sincronizacion-icloud && git push origin main`. La migración va antes que el despliegue.
 
 Sin variables nuevas en Vercel, sin secretos nuevos en Vault y sin registrar nada en Apple.

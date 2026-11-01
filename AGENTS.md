@@ -12,7 +12,7 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 Contexto completo del proyecto para cualquier IA que empiece a trabajar en él. Léelo entero antes de tocar código. El bloque de arriba lo gestiona `next dev`: no lo edites; todo lo de debajo es documentación del proyecto y `next dev` lo respeta.
 
-> Última actualización: 2026-11-01, al implementar la spec 018 (iCloud) en la rama `018-sincronizacion-icloud`: T2–T14 hechas, pendientes la comprobación con una cuenta real (T1), sus 2 migraciones en prod y la demo en el iPhone (T15).
+> Última actualización: 2026-11-01, al implementar la spec 018 (iCloud) en la rama `018-sincronizacion-icloud`: T1–T14 hechas (comprobada con una cuenta real), pendientes sus 2 migraciones en prod y la demo en el iPhone (T15).
 
 ## 1. Qué es
 
@@ -45,7 +45,7 @@ Contexto completo del proyecto para cualquier IA que empiece a trabajar en él. 
 | 015-asistente-de-chat | Asistente de chat sobre los eventos y la disponibilidad común, con un proveedor LLM gratuito (no Gemini) | **Spec aprobada** (2026-10-29), sin plan |
 | 016-calendario-estilo-google | Calendario como Google Calendar en el móvil: bloques rellenos, cabecera con cajón y "+", deslizar, agenda continua y fila de meses (enmienda 4 de la constitución) | **Cerrada** (2026-10-30), T1–T13 hechas; sin migraciones. La prueba en el iPhone se hace en producción |
 | 017-mover-eventos-y-menu | Mover y redimensionar arrastrando, menú contextual en el ordenador, "Deshacer" en los avisos, detalle en hoja inferior en el móvil, pellizcar para ampliar y atajos nuevos (enmienda 5) | **Cerrada** (2026-11-01), T1–T16 hechas; 2 migraciones aplicadas en prod |
-| 018-sincronizacion-icloud | Calendarios de iCloud (iPhone) por CalDAV con contraseña específica de app, con el mismo alcance que Google en la 007 y la 009 (leer, escribir, renombrar, crear y subir). Dependencia `tsdav` aprobada; se instala en la primera tarea | **Implementada** (2026-11-01) en la rama `018-sincronizacion-icloud`, T2–T14 hechas; pendientes la comprobación con una cuenta real (T1), las 2 migraciones en prod y la demo (T15); enmienda 6 aplicada |
+| 018-sincronizacion-icloud | Calendarios de iCloud (iPhone) por CalDAV con contraseña específica de app, con el mismo alcance que Google en la 007 y la 009 (leer, escribir, renombrar, crear y subir). Dependencia `tsdav` aprobada; se instala en la primera tarea | **Implementada** (2026-11-01) en la rama `018-sincronizacion-icloud`, T1–T14 hechas; pendientes las 2 migraciones en prod y la demo (T15); enmienda 6 aplicada |
 
 Las specs 001–004 (cerradas, no se editan) citan la gestión de cuenta como "spec 005" y OAuth como "spec 006": hoy son la 006 y la 007.
 
@@ -669,6 +669,6 @@ La **007 (sincronización de Google, solo lectura, y grupos)** y la **009 (sincr
 - La **013 (eventos recurrentes)** está cerrada (2026-10-31), con sus 6 migraciones aplicadas en prod.
 - La **014 (comentarios)** está cerrada (2026-11-01), con sus 2 migraciones aplicadas en prod.
 - La **017 (mover eventos, menú y "Deshacer")** está cerrada (2026-11-01), con sus 2 migraciones aplicadas en prod. Al soltar, cambiar el color o borrar una repetición se pregunta el alcance; "Deshacer" solo con "Solo este evento".
-- La **018 (iCloud)** está implementada en la rama `018-sincronizacion-icloud` (T2–T14). Falta: que el usuario ejecute la comprobación con una cuenta real (`node specs/018-sincronizacion-icloud/icloud-check.mjs`, T1) y se anote su salida en el plan; aplicar sus 2 migraciones en prod; integrar en `main`; y la demo en el iPhone para cerrarla (T15). Si la T1 dice que iCloud no deja renombrar (g), hay que deshabilitar el nombre de los calendarios de iCloud (plan D14).
+- La **018 (iCloud)** está implementada en la rama `018-sincronizacion-icloud` (T1–T14; la comprobación con una cuenta real confirmó `MOVE` y renombrar). Falta: aplicar sus 2 migraciones en prod, integrar en `main` y la demo en el iPhone para cerrarla (T15).
 - **Siguiente:** cerrar la 018 y después la 015 (asistente de chat), con su plan y sus tareas aprobados. Las specs de la 011 a la 015 están aprobadas desde el 2026-10-29.
 - Los usuarios de prueba usan `@cafam.test`. Los antiguos del dominio anterior se borraron de dev en la spec 010 (T5), con permiso del usuario.

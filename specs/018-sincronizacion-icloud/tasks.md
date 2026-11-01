@@ -1,6 +1,6 @@
 # Tasks 018 - Sincronización con iCloud (calendarios del iPhone)
 
-> Estado: **Aprobadas** por el usuario (2026-11-01). T2–T14 hechas; T1 a medias (`tsdav` instalada, falta la comprobación con una cuenta real) y T15 a medias (verificación en dev hecha, faltan producción, la demo en el iPhone y el cierre).
+> Estado: **Aprobadas** por el usuario (2026-11-01). T1–T14 hechas (la T1 con la cuenta real del usuario, resultado en el plan) y T15 a medias (verificación en dev hecha, faltan producción, la demo en el iPhone y el cierre).
 > Spec: `specs/018-sincronizacion-icloud/spec.md` (aprobada, 2026-11-01). Plan: `specs/018-sincronizacion-icloud/plan.md` (aprobado, 2026-11-01).
 > 15 tareas en tres iteraciones: T1–T9 (comprobaciones, base y piezas de iCloud), T10–T14 (motor y pantallas) y T15 (validación). No se empieza una iteración sin cerrar la anterior.
 > Reglas:
@@ -17,7 +17,7 @@
 
 ### Iteración 1 — Comprobaciones, base y piezas de iCloud
 
-- [ ] T1 Instalar `tsdav` y comprobar con una cuenta real lo que el plan da por supuesto
+- [x] T1 Instalar `tsdav` y comprobar con una cuenta real lo que el plan da por supuesto
   Pasos: `npm install --save-exact tsdav@2.5.0`. El usuario crea una contraseña específica de app y la pone en `.env.local` (`ICLOUD_TEST_APPLE_ID`, `ICLOUD_TEST_APP_PASSWORD`; nunca en el chat). El agente escribe en el scratchpad un script que hace las comprobaciones (a) a (i) del plan sin imprimir credenciales; el usuario lo ejecuta con `!`. Se borran después del iCloud real los eventos y el calendario de prueba creados.
   Hecho cuando: `package.json` tiene `"tsdav": "2.5.0"`, `npm run build` en verde y "Resultado de la T1" del plan anota (a) a (i). Si (e), (f) o (g) no funcionan como espera el plan, se detiene y se vuelve al usuario (D9, D14). Cubre: RF-14, RF-20, RF-41, RF-52, RF-61, requisito de coste cero | Módulo: comprobación
 
@@ -92,7 +92,9 @@ Verificación completa (P8) del 2026-11-01 en la rama, tras la T14:
 - Capturas de `/dashboard/connections/new?provider=icloud` y `/dashboard/connections` a 390, 768 y 1440 px, en tema claro y oscuro, con el acento rojo: sin desbordes ni colores fuera de los tokens.
 - Prueba contra el iCloud real con un Apple ID inventado y una contraseña con forma válida: iCloud responde 401, la pantalla muestra "iCloud no ha aceptado el Apple ID o la contraseña…", conserva el Apple ID y vacía la contraseña (RF-6, RF-7).
 
-Pendiente: la comprobación (a)–(i) con una cuenta real (T1), la migración en producción, la demo en el iPhone y la aprobación del cierre (T15).
+- Comprobación (a)–(i) con la cuenta real del usuario (T1): todo como esperaba el plan; `MOVE` y renombrar funcionan (detalle en el plan, "Resultado de la T1").
+
+Pendiente: la migración en producción, la demo en el iPhone y la aprobación del cierre (T15).
 
 ## Trazabilidad RF -> Tareas
 

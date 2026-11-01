@@ -12,7 +12,7 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 Contexto completo del proyecto para cualquier IA que empiece a trabajar en él. Léelo entero antes de tocar código. El bloque de arriba lo gestiona `next dev`: no lo edites; todo lo de debajo es documentación del proyecto y `next dev` lo respeta.
 
-> Última actualización: 2026-11-01, al cerrar la spec 014 (comentarios), con sus 2 migraciones aplicadas en prod.
+> Última actualización: 2026-11-01, al implementar la spec 017 (mover eventos, menú y "Deshacer"), pendiente de cerrar y de aplicar sus 2 migraciones en prod.
 
 ## 1. Qué es
 
@@ -44,7 +44,7 @@ Contexto completo del proyecto para cualquier IA que empiece a trabajar en él. 
 | 014-comentarios-en-eventos | Comentarios en los eventos por cualquier miembro, Lectores incluidos | **Cerrada** (2026-11-01), T1–T11 hechas; 2 migraciones aplicadas en prod |
 | 015-asistente-de-chat | Asistente de chat sobre los eventos y la disponibilidad común, con un proveedor LLM gratuito (no Gemini) | **Spec aprobada** (2026-10-29), sin plan |
 | 016-calendario-estilo-google | Calendario como Google Calendar en el móvil: bloques rellenos, cabecera con cajón y "+", deslizar, agenda continua y fila de meses (enmienda 4 de la constitución) | **Cerrada** (2026-10-30), T1–T13 hechas; sin migraciones. La prueba en el iPhone se hace en producción |
-| 017-mover-eventos-y-menu | Mover y redimensionar arrastrando, menú contextual en el ordenador, "Deshacer" en los avisos, detalle en hoja inferior en el móvil, pellizcar para ampliar y atajos nuevos (enmienda 5) | **Spec aprobada** (2026-10-30), sin plan; va después de la 016 |
+| 017-mover-eventos-y-menu | Mover y redimensionar arrastrando, menú contextual en el ordenador, "Deshacer" en los avisos, detalle en hoja inferior en el móvil, pellizcar para ampliar y atajos nuevos (enmienda 5) | **Implementada** (2026-11-01), T1–T15 hechas; T16 pendiente de la prueba con Google y de la aprobación. 2 migraciones aún no aplicadas en prod |
 
 Las specs 001–004 (cerradas, no se editan) citan la gestión de cuenta como "spec 005" y OAuth como "spec 006": hoy son la 006 y la 007.
 
@@ -97,7 +97,7 @@ Añadido por la spec 008 (comportamiento estudiado en Google Calendar con REA; a
 - **Mes al estilo Google**: eventos con hora como punto + hora + título; de día completo o varios días como barra rellena del color pastel (enmienda de P9). **Rejilla** de semana y día a toda la altura de la pantalla.
 - **Agenda**: botón fijo "Hora actual". **Avisos** breves ("Evento creado", "Cambios guardados", "Evento borrado"), **esqueleto** con la forma de la vista mientras carga y **actualización** al volver a la app tras más de 60 s.
 
-**No hay** mover o redimensionar eventos arrastrando (spec 017) ni actualización de lo importado.
+**No hay** actualización de lo importado.
 
 Añadido por la spec 007 (en producción desde el 2026-10-28). Hasta la 009 la aplicación de Google estuvo en "Prueba" (Enmienda 2); desde el 2026-10-29 está **publicada sin verificar**: conecta cualquier cuenta pasando por el aviso de "aplicación no verificada", con un tope de 100 usuarios, y la autorización ya no caduca a los 7 días:
 
@@ -164,6 +164,19 @@ Añadido por la spec 014 (en producción desde el 2026-11-01):
 - **Repeticiones**: comentar una repetición sin fila la materializa (`materialize_occurrence`); cada repetición tiene los suyos. El aviso de pérdidas de la 013 los cuenta ("Se perderán 2 cambios, 3 imágenes y 4 comentarios.").
 - Borrar el evento (también desde la sincronización) los borra; moverlo y juntar calendarios los conservan; las copias de calendarios sin propietario los copian; duplicar no los copia.
 
+Añadido por la spec 017 (implementada el 2026-11-01, sin cerrar):
+
+- **Mover y redimensionar con el ratón** en semana y día (`DraggableEvent` y `use-event-drag.ts`): se levanta a los 4 px, se mueve en cuartos de hora conservando la duración, cambia de día, muestra las horas nuevas y se autodesplaza cerca del borde. El borde inferior cambia el fin (como mínimo 15 min; sin tirador si cruza la medianoche). Escape o soltar en el mismo sitio o fuera no guardan, y el clic que sigue a un arrastre no abre el evento. Solo en los eventos que se pueden escribir (`canWriteEvents`); en los demás el bloque es un enlace normal.
+- **Franja de día completo** siempre visible en semana y día: soltar ahí un evento con hora lo pasa a día completo, y un día completo de un solo día soltado en la rejilla dura 1 h desde ese punto. En el **mes** se mueve de día conservando la hora y la duración.
+- **Con el dedo**: mantener pulsado 500 ms levanta el evento (moverse antes desplaza o desliza; un segundo dedo cancela). Queda levantado con un tirador que cambia el fin hasta tocar en otro sitio. Sin menú del sistema.
+- **Guardado** (`quick-actions.ts`: `quickChange`, `deleteForUndo`, `undoAction`, `pasteEvent`, `deleteFromDetail`): el evento se mueve en el acto y vuelve a su sitio con el motivo si falla. En calendarios traídos se escribe primero en Google (spec 009). En una **repetición** se pregunta el alcance de la 013 (`SeriesScopeChoice`); cancelar la devuelve a su sitio.
+- **"Deshacer" en los avisos** durante 10 s tras mover, redimensionar, cambiar el color, borrar o pegar (en una repetición, solo con "Solo este evento"). Deshacer no pisa un evento que cambió entretanto. El borrado guarda una copia en `event_trash` (con imágenes y comentarios) y se puede restaurar durante 1 minuto; en un traído se vuelve a crear en Google. Borrar desde el detalle ya no pide confirmar: avisa con "Deshacer".
+- **Menú contextual** (`EventMenu`, clic derecho, tecla Menú o Mayús+F10): los 13 colores de la paleta, "Color del calendario", Duplicar y Borrar, todo con el teclado.
+- **Teclado sobre un evento enfocado** (`use-event-keys.ts`): Alt+flechas lo mueven 15 min o un día (guarda 600 ms después de la última tecla), Supr o Retroceso lo borran, Ctrl+C lo copia y Ctrl+V lo pega en el último hueco pulsado o en la fecha de la vista (portapapeles en `EventClipboardProvider`, dentro de `AppFrame`). Una repetición se pega como evento suelto.
+- **Atajos nuevos**: E (editar el detalle abierto), G (`GoToDateDialog`, ir a una fecha) y ? (`ShortcutsHelp`, sale de la tabla `SHORTCUTS` de `shortcuts.ts`). En el detalle, E, Supr y Ctrl+C.
+- **Detalle en hoja inferior en el móvil** (`EventModal variant="sheet"`, solo el detalle interceptado a ≤ 768 px): abre a media altura, el asa (o deslizar 60 px o a 0,5 px/ms, `sheet.ts`) amplía, reduce o cierra, tocar el fondo cierra, y "Editar" o E la amplían.
+- **Pellizcar o Ctrl + rueda** cambian la altura de las horas en semana y día (24–144 px, `zoom.ts` y `use-grid-zoom.ts`), con la hora bajo el gesto fija; se recuerda en el dispositivo (`localStorage` `cafam-hour-px`).
+
 La fuente de verdad es [`docs/constitution.md`](docs/constitution.md). Resumen de lo que más afecta a un agente:
 
 - **Flujo SDD (P7):** no se escribe código sin `spec.md` → `plan.md` → `tasks.md` aprobados explícitamente por el usuario, en ese orden. Cada spec vive en `specs/NNN-nombre/`. Se implementa **una tarea `Tn` cada vez y con el test primero** (rojo → verde). Cada commit cita su tarea.
@@ -225,6 +238,7 @@ Dependencias de producción: `next`, `react`, `react-dom`, `@supabase/supabase-j
 │   │   ├── dashboard/         # layout.tsx (marco con el acento + slot `modal`), page.tsx (redirige al calendario); protegido por getRouteAccess
 │   │   │   ├── @modal/        # spec 008: default.tsx y [...catchAll] (null), (.)events/new y (.)events/[id] (ventana sobre el calendario)
 │   │   │   ├── calendar/      # vistas agenda/mes/semana/día (?view=&date=) + preferences-actions.ts (incl. saveLastView) + mini-month-actions.ts + agenda-actions.ts (loadAgendaEvents, spec 016)
+│   │   │   │                  # events/ también: quick-actions.ts, quick-writes.ts y event-writes.ts (spec 017: cambios rápidos, deshacer y pegar)
 │   │   │   ├── calendars/     # page.tsx ("Mis calendarios"), new, [id]/edit, [id]/categories, merge + actions.ts (calendarios y juntar)
 │   │   │   ├── settings/      # Ajustes: acento + actions.ts (setAccent) y cuenta + account-actions.ts (spec 006)
 │   │   │   ├── connections/   # spec 007: page.tsx (lista), new (aviso previo), [id] (elegir calendarios, estado, actualizar, desconectar; `maxDuration` 60) + actions.ts (saveSelection, syncNow, disconnectAccount)
@@ -247,7 +261,7 @@ Dependencias de producción: `next`, `react`, `react-dom`, `@supabase/supabase-j
 │   │   ├── people/            # avatar
 │   │   ├── auth/              # auth-card, login-form, signup-form (Client Components con useActionState)
 │   │   ├── dashboard/         # calendar-list
-│   │   ├── calendar/          # formularios, vistas (agenda-view, month/week/day, time-grid, slot-layer), event-block (bloque relleno con las marcas de imágenes y de repetición), month-strip, fab, event-modal, event-panel, quick-create, gone-event, calendar-skeleton, mini-month, next-event-card, filtros, workspace, merge-form, confirm-dialog…
+│   │   ├── calendar/          # formularios, vistas (agenda-view, month/week/day, time-grid, slot-layer), event-block (bloque relleno con las marcas de imágenes y de repetición), month-strip, fab, event-modal, event-panel, quick-create, gone-event, calendar-skeleton, mini-month, next-event-card, filtros, workspace, merge-form, confirm-dialog, draggable-event, event-interactions (contexto), event-menu, event-clipboard, go-to-date-dialog, shortcuts-help, use-undo-toast (spec 017)…
 │   │   ├── sharing/           # invite-form, copy-button, invite-list, access-code-panel, member-list, join-code-form, invite-join-card
 │   │   ├── import/            # import-form, import-summary
 │   │   ├── recurrence/        # spec 013: repeat-field, recurrence-editor, series-scope-dialog, series-delete
@@ -257,11 +271,11 @@ Dependencias de producción: `next`, `react`, `react-dom`, `@supabase/supabase-j
 │   │   └── pwa/               # service-worker-register, retry-button, ios-install-hint
 │   ├── lib/
 │   │   ├── auth/              # schemas.ts (zod), error-messages.ts, form-state.ts, route-access.ts, next-path.ts (destino tras login: solo /invite/<token>)
-│   │   ├── calendar/          # LÓGICA PURA testeada: palette, time-zone, ranges, layout, agenda-feed, agenda-today, month-lanes, month-strip, swipe, to-view-events, month-marks, next-event, grouping, format, schemas, error-messages, time-options, slots, popover, shortcuts, new-event-query, draft; queries.ts (lecturas con RLS)
+│   │   ├── calendar/          # LÓGICA PURA testeada: palette, time-zone, ranges, layout, agenda-feed, agenda-today, month-lanes, month-strip, swipe, to-view-events, month-marks, next-event, grouping, format, schemas, error-messages, time-options, slots, popover, shortcuts, new-event-query, draft, drag, undo, sheet, zoom (spec 017); queries.ts (lecturas con RLS)
 │   │   ├── theme/             # accents.ts: los seis acentos y los neutros (fuente de los valores de globals.css)
 │   │   ├── shell/             # nav.ts: destinos y sección activa
 │   │   ├── people/            # avatar.ts: iniciales y tintes
-│   │   ├── hooks/             # use-now.ts (reloj compartido), use-calendar-shortcuts.ts, use-refresh-on-focus.ts, use-swipe.ts, use-is-phone.ts
+│   │   ├── hooks/             # use-now.ts (reloj compartido), use-calendar-shortcuts.ts, use-refresh-on-focus.ts, use-swipe.ts, use-is-phone.ts, use-event-drag.ts, use-event-keys.ts, use-grid-zoom.ts (spec 017)
 │   │   ├── sharing/           # schemas, error-messages, merge-access, invite-url, roles (puros) y queries.ts (lecturas con RLS)
 │   │   ├── ics/               # importación .ics: limits, source-url, ip-guard, fetch-ics, read-source, parse-ics (única que importa ical.js), convert-events, import-calendar (orquesta), schemas, error-messages, import-state
 │   │   ├── forms/             # form-state.ts: FormState genérico, ConfirmState, ParseResult, readString
@@ -276,7 +290,7 @@ Dependencias de producción: `next`, `react`, `react-dom`, `@supabase/supabase-j
 │   └── icons/                 # icon.svg (maestro) → icon-192, icon-512, icon-512-maskable (letras al 85 %), apple-touch-icon
 ├── supabase/
 │   ├── config.toml
-│   └── migrations/            # 001: base_schema, rls_policies · 002: calendars_and_events, merge_calendars · 003: sharing_tables_and_policies, members_with_names, invite_functions, access_code_functions, fix_join_with_code · 004: import_calendar · 005: profile_accent, remove_old_blue · 006: account_orphan_schema, account_recovery_limit, delete_own_account, decide_orphan_calendar, copy_calendar_for_owner, apply_orphan_decisions, account_mail_jobs, account_notices_read, skip_test_addresses · 008: profile_last_view · 007: sync_schema, sync_readonly, sync_connect_functions, sync_worker_functions, calendar_groups · 009: sync_write_schema, sync_write_functions, sync_apply_events_v2 · 010: rename_cafam · 011: profile_theme · 012: event_images, event_images_functions, event_images_storage, event_images_purge_claim, copy_calendar_images(_fix), images_purge, reserve_images_order · 013: event_series, series_reserve_images, series_rules_fast_tz, event_series_functions, series_copy_upload, materialize_occurrence · 014: event_comments, comments_copy_loss
+│   └── migrations/            # 001: base_schema, rls_policies · 002: calendars_and_events, merge_calendars · 003: sharing_tables_and_policies, members_with_names, invite_functions, access_code_functions, fix_join_with_code · 004: import_calendar · 005: profile_accent, remove_old_blue · 006: account_orphan_schema, account_recovery_limit, delete_own_account, decide_orphan_calendar, copy_calendar_for_owner, apply_orphan_decisions, account_mail_jobs, account_notices_read, skip_test_addresses · 008: profile_last_view · 007: sync_schema, sync_readonly, sync_connect_functions, sync_worker_functions, calendar_groups · 009: sync_write_schema, sync_write_functions, sync_apply_events_v2 · 010: rename_cafam · 011: profile_theme · 012: event_images, event_images_functions, event_images_storage, event_images_purge_claim, copy_calendar_images(_fix), images_purge, reserve_images_order · 013: event_series, series_reserve_images, series_rules_fast_tz, event_series_functions, series_copy_upload, materialize_occurrence · 014: event_comments, comments_copy_loss · 017: event_undo, trash_row
 ├── tests/
 │   ├── setup-unit.ts
 │   ├── fixtures/ics/          # .ics sintéticos al estilo Google, iCloud y Outlook (nunca calendarios reales)
@@ -418,6 +432,10 @@ La decisión de acceso es una función pura, `getRouteAccess(pathname, hasSessio
   - `event_comments (id, event_id → events on delete cascade, author_id → profiles on delete set null default auth.uid(), client_id, body 1..1000, created_at, edited_at)`, `unique (author_id, client_id)` (un doble envío se guarda una vez). RLS: leen los miembros del calendario del evento; insertan los miembros como autores; actualiza el autor; borran el autor o `calendar_role_for = 'owner'`. Permisos por columna: `insert (event_id, body, client_id)` y `update (body)`.
   - Trigger `event_comments_rules`: recorta los extremos (`\s`), pone `edited_at` al cambiar el texto y da `22023` en la fila de una serie.
   - `copy_calendar_for_owner` copia los comentarios; `series_loss` devuelve también `comments` (se borró y se creó de nuevo por el cambio de tipo).
+- Añadido por la spec 017 (migraciones `event_undo` y `trash_row`; en dev, **pendientes en prod**):
+  - `event_trash` (copia del evento, sus imágenes `ready` y sus comentarios, con `deleted_by`): RLS sin políticas y sin permisos para clientes; solo la tocan las funciones. Se guarda la última copia de cada usuario.
+  - `snapshot_event(p_event_id, …)` (owner o editor, antes del borrado normal) y `restore_event(p_trash_id, p_event_id default null)` (solo quien borró, en el primer minuto y con el rol aún vigente; `p_event_id` cuelga imágenes y comentarios del evento recreado en Google). `trash_row(p_trash_id)` devuelve la fila guardada a quien borró. Una repetición sin fila se restaura quitando su fecha de `exdates`.
+  - `images_claim_purge` deja en la cola los objetos de los últimos 2 minutos, así las imágenes sobreviven al "Deshacer". `pg_cron` `event-trash-purge` (05:00 UTC) borra las copias de más de 1 h; `trash_scheduled_jobs()` es la ayuda de tests.
 - La evolución prevista (`calendar_invites`, `calendar_access_codes`, …) está en el Anexo A de `specs/001-base-aplicacion/plan.md`.
 
 ### PWA
@@ -545,6 +563,8 @@ npm run db:types       # regenera src/types/database.ts
 - **Ids de evento (spec 013):** un id de la URL puede ser de una repetición (`<uuid>_<fecha>`). Valídalo con `parseEventId`, nunca con `z.uuid()`, y lee con `getEvent`, que devuelve la fila, la excepción o la repetición calculada con su `series`.
 - **Comentarios (spec 014):** las acciones de `app/dashboard/events/comment-actions.ts` no redirigen: devuelven `CommentResult` con la lista ya actualizada (reciben `since`, el comentario más antiguo cargado). `gone` cierra la ventana o vuelve al calendario. Un id de repetición se resuelve con `commentRowFor`.
 - **Escrituras sobre series:** `updateEvent` y `deleteEvent` leen `scope` y `confirmLoss` del formulario; las funciones y sus argumentos salen de `planSeriesChange`/`planSeriesDelete` (puras y testeadas), y la acción solo consulta `series_loss` y llama. Un cambio nuevo sobre series va ahí.
+- **Interacciones con eventos (spec 017):** `EventInteractionsProvider` (`event-interactions.tsx`, con `useEventInteractionsState` en el workspace) guarda los cambios optimistas, el aviso con "Deshacer", el menú y la región `aria-live`; las vistas lo leen con `useEventInteractions()` y pintan cada evento editable dentro de `DraggableEvent`. Las vistas marcan sus zonas con `data-time-col` (columnas de la rejilla), `data-allday-day` (franja de día completo), `data-date` (celdas del mes) y `data-grid-scroll` (contenedor que se autodesplaza); `targetAt` busca con `elementsFromPoint`. `EventBlock` lleva `data-event-id`, que usan el teclado y el menú.
+- **Atajos y ayuda:** un atajo nuevo va en `SHORTCUTS` (`shortcuts.ts`), que alimenta `KEYS` y la ayuda (?). Cada diálogo de atajo solo se cierra a sí mismo.
 - **Commits:** Conventional Commits en español con la tarea: `feat: registro de usuario (T7)`.
 
 ## 10. Trampas conocidas
@@ -610,11 +630,16 @@ npm run db:types       # regenera src/types/database.ts
 - **`pg_timezone_names` es lento** dentro de un trigger que corre en cada fila: `series_rules_fast_tz` valida la zona con `now() at time zone`.
 - **es-ES no agrupa números de cuatro cifras** (`(1000).toLocaleString("es-ES")` da "1000"): para "1.000" usa `formatCount` (`lib/comments/limits.ts`, `useGrouping: "always"`).
 - **Los cursores de los comentarios usan `created_at` tal como lo devuelve Postgres** (con microsegundos): no lo pases por `Date`, o el sondeo pierde o repite comentarios.
+- **`elementsFromPoint` no existe en jsdom:** `targetAt` lo tolera; en los tests de arrastre se simula en el documento.
+- **El evento `close` de un `<dialog>` llega después** del cambio de estado: no decidas con él si la ventana sigue abierta; usa el estado de React.
+- **Un toque produce un `click` sintético después del `pointerup`:** si se abre una ventana en el `pointerup`, ese clic la cierra. Con el dedo se crea en el `click` (`SlotLayer`) y tras un arrastre se traga el clic siguiente (`use-event-drag.ts`).
+- **`touch-action`**: sin `touch-none` en el bloque levantado, el navegador desplaza y lanza `pointercancel`; la rejilla lleva `touch-pan-x touch-pan-y` para que el pellizco llegue a la app y no amplíe la página.
+- **Arneses de test de las vistas:** pasa arrays estables (fuera del render); un array nuevo en cada render reinicia los cambios optimistas del contexto y el test parece no guardar.
 - **Parar `next start` en segundo plano:** detener la tarea no mata el proceso de Node y el puerto 3100 queda ocupado; mata el PID que escucha en él (`netstat -ano | grep :3100`).
 
 ## 11. Fuera de alcance hasta su spec
 
-Vistas de año y de 4 días, búsqueda, papelera o deshacer más de una acción, recordatorios push, compartir e integrar con el sistema, alta en lenguaje natural (las cuatro últimas, en la hoja de ruta de la constitución), zona horaria por evento, sincronizar o actualizar un calendario importado, importar a un calendario que ya existe, exportar a `.ics`, verificación de email en el registro, traspaso voluntario de calendarios, exportar los datos de la cuenta, login social, Microsoft, notificaciones, uso offline con datos e i18n. No implementes nada de esto sin su spec aprobada. Mover o redimensionar arrastrando y "Deshacer" en los avisos ya tienen spec aprobada (017), igual que el asistente (015): se implementan siguiendo su plan y sus tareas cuando estén aprobados.
+Vistas de año y de 4 días, búsqueda, papelera o deshacer más de una acción, recordatorios push, compartir e integrar con el sistema, alta en lenguaje natural (las cuatro últimas, en la hoja de ruta de la constitución), zona horaria por evento, sincronizar o actualizar un calendario importado, importar a un calendario que ya existe, exportar a `.ics`, verificación de email en el registro, traspaso voluntario de calendarios, exportar los datos de la cuenta, login social, Microsoft, notificaciones, uso offline con datos e i18n. No implementes nada de esto sin su spec aprobada. El asistente (015) ya tiene spec aprobada: se implementa siguiendo su plan y sus tareas cuando estén aprobados.
 
 ## 12. Cómo continuar
 
@@ -628,5 +653,6 @@ La **007 (sincronización de Google, solo lectura, y grupos)** y la **009 (sincr
 - La **016 (calendario al estilo Google)** está cerrada (2026-10-30). Las previews de Vercel están protegidas con su inicio de sesión: para verlas en el móvil hay que entrar en Vercel o usar "Share".
 - La **013 (eventos recurrentes)** está cerrada (2026-10-31), con sus 6 migraciones aplicadas en prod.
 - La **014 (comentarios)** está cerrada (2026-11-01), con sus 2 migraciones aplicadas en prod.
-- **Siguiente:** por orden y cada una con su plan y sus tareas aprobados: 017 (mover arrastrando, menú y "Deshacer"; spec aprobada, enmienda 5 ya en la constitución; tendrá que decidir el alcance al soltar una repetición) y 015 (asistente de chat). Las specs de la 011 a la 015 están aprobadas desde el 2026-10-29.
+- La **017 (mover eventos, menú y "Deshacer")** está implementada (2026-11-01, T1–T15) en la rama `017-mover-eventos-y-menu`. Falta T16: la prueba con un calendario traído de Google real, aplicar `event_undo` y `trash_row` en prod y la aprobación del usuario para cerrarla. Al soltar, cambiar el color o borrar una repetición se pregunta el alcance; "Deshacer" solo con "Solo este evento".
+- **Siguiente:** 015 (asistente de chat), con su plan y sus tareas aprobados. Las specs de la 011 a la 015 están aprobadas desde el 2026-10-29.
 - Los usuarios de prueba usan `@cafam.test`. Los antiguos del dominio anterior se borraron de dev en la spec 010 (T5), con permiso del usuario.

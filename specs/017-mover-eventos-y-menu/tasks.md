@@ -174,6 +174,47 @@
 
   Hecho cuando: verificación completa (P8) en verde con la salida reportada, `npm run test:db` en verde, evidencias en este archivo y aprobación del usuario para cerrar la spec. Cubre: todos | Módulo: validation
 
+## Evidencias de la validación (T16, 2026-11-01)
+
+Tests en `tests/unit/` salvo que se diga otra cosa; "manual" son las pruebas con `playwright-cli` descritas en la evidencia de cada tarea.
+
+| RF | Test | Prueba manual |
+|----|------|---------------|
+| RF-1, RF-2, RF-4 | `event-interactions`, `draggable-event`, `quick-actions` ("explains a refusal of RLS") | T7: Lector sin arrastre |
+| RF-3, RF-38 | `quick-actions` (Google primero, nada si rechaza, color nunca como campo de Google), `write-event` | Pendiente con Google (ver abajo) |
+| RF-5 a RF-12, RF-19, RF-20, RF-23 | `drag` (cuartos, duración, días, mismo sitio), `draggable-event` (umbral, Escape, autodesplazamiento, aviso) | T7 (ratón a 1440 px) y T10 (dedo a 390 px) |
+| RF-13 a RF-15 | `drag` ("conversions"), `draggable-event` (modo "strip") | T8 |
+| RF-16, RF-17 | `drag` (`moveInMonth`), `month-view` | T9 |
+| RF-18, RF-21 | `event-interactions` (repeticiones con alcance, cancelar devuelve el evento) | T6 |
+| RF-22 | `draggable-event` (pulsación larga, segundo dedo cancela) | T10 |
+| RF-24 a RF-31 | `tests/integration/event-undo.test.ts` (papelera, roles, imágenes y comentarios, exdates), `quick-actions` (deshacer, caducado, cambiado entretanto), `toast` (Deshacer 10 s, "Deshecho", fallo) | T5 (borrar desde el detalle y deshacer) y T12 (deshacer pegar y borrar) |
+| RF-32 a RF-43 | `event-menu` (13 colores, color del calendario, Duplicar, Borrar, teclado, Mayús+F10) | T11 |
+| RF-44 a RF-48 | `sheet` (`sheetAfterDrag`), `event-modal` (`variant="sheet"`, asa, fondo, ampliar) | T14 (390 px, claro y oscuro) |
+| RF-49 a RF-53 | `zoom`, `use-grid-zoom`, `slot-layer`, `time-grid` | T15 (Ctrl + rueda a 1440 px, pellizco a 390 px) |
+| RF-54 a RF-64 | `use-event-keys` (Alt+flechas, Supr, Ctrl+C/V), `shortcuts`, `use-calendar-shortcuts`, `shortcuts-help`, `go-to-date-dialog`, `event-panel` (E, Supr, Ctrl+C) | T12 y T13 |
+| Repeticiones (plan) | `quick-actions` (alcance, solo "this" deshace, pegar como suelto), `event-interactions`, `event-undo` (exdates y excepción) | T6 |
+
+Casos límite:
+
+| Caso | Cubierto por |
+|------|--------------|
+| Evento que cruza la medianoche: sin tirador, se mueve entero | `drag` ("an overnight event…", "keeps a multi-day timed event whole"), `draggable-event` (`resizable` solo en eventos de un día) |
+| Cambio de hora (hora de primavera que no existe) | `drag` ("puts a nonexistent spring hour at the first valid one") |
+| Soltar fuera de la rejilla o en el mismo sitio | `drag` ("returns null in the same place"), `draggable-event` |
+| Pellizco: ni ventana rápida ni levantar el evento | `draggable-event` (un segundo dedo cancela), `slot-layer` (un segundo dedo anula el toque); manual T15 |
+| Ctrl+C con texto seleccionado o escribiendo | `use-event-keys` |
+| Atajos con una ventana abierta | `use-calendar-shortcuts`, `use-event-keys` |
+| Deshacer cuando el evento cambió entretanto o el id se volvió a usar | `quick-actions`, `event-undo` |
+| Calendario traído de solo lectura | `quick-actions`, `event-interactions` |
+
+Capturas: 12 a 390, 768 y 1440 px, en claro y oscuro, con el acento rojo y el amarillo, durante un arrastre en la vista semana (solo locales). En oscuro el anillo del bloque levantado apenas se ve; lo distingue la sombra.
+
+Verificación (P8): typecheck, format y build correctos; lint sin errores (los 2 avisos previos); `npm test` con 206 ficheros y 1969 tests en verde. `npm run test:db`: 36 ficheros en verde y 4 caídos por `Request rate limit reached` de Auth en los `beforeAll` (trampa conocida); repetidos con `--no-file-parallelism`, 4 ficheros y 17 tests en verde. Usuario de prueba `t7-drag@cafam.test` borrado de dev.
+
+**No hecho:** la prueba con un calendario traído de Google real (dev, puerto 3000, OAuth). Necesita conectar una cuenta de Google del usuario. La escritura en Google está cubierta solo por tests con el motor simulado (`quick-actions`, `write-event`).
+
+**Tests escritos con el código, sin rojo separado:** T4, T6 y T10.
+
 ## Trazabilidad RF → tareas
 
 | RF | Tareas |

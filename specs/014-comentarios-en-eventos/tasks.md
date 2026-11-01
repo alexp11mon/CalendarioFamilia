@@ -137,7 +137,7 @@
   Hecho cuando: `npm test -- event-block to-view-events series-scope-dialog series-actions` y `npm run test:db -- comment-queries` en verde. Cubre: RF-5, RF-28 | Módulo: comments-marks
   Evidencia (2026-10-31): rojo en 11 casos de `event-block`, `to-view-events`, `series-scope-dialog` y `series-actions`. `npm test -- event-block to-view-events series-scope-dialog series-actions event-detail event-form` 102 tests y `test:db -- comment-queries event-series` 41 tests en verde (`getEventsInRange` cuenta los de sueltos y excepciones). typecheck, format y build correctos, lint con los 2 avisos previos, `npm test` 1812 tests.
 
-- [ ] T11 Validar la spec RF por RF
+- [x] T11 Validar la spec RF por RF
   Pasos:
   - Tabla de evidencias RF-1 a RF-28 en este archivo, con el test que cubre cada uno.
   - Verificación completa y `npm run test:db` entero.
@@ -146,7 +146,7 @@
   - Actualizar `AGENTS.md`.
 
   Hecho cuando: tabla de evidencias completa, verificación con la salida reportada y aprobación del usuario para cerrar. Cubre: todos | Módulo: validation
-  Evidencia (2026-10-31): tabla de evidencias RF-1 a RF-28 en este archivo; `npm run test:db` 39 archivos y 435 tests, `npm test` 194 archivos y 1812 tests, typecheck, format y build correctos; prueba manual con dos usuarios y 19 capturas. Falta la aprobación del usuario para cerrar la spec.
+  Evidencia (2026-10-31): tabla de evidencias RF-1 a RF-28 en este archivo; `npm run test:db` 39 archivos y 435 tests, `npm test` 194 archivos y 1812 tests, typecheck, format y build correctos; prueba manual con dos usuarios y 19 capturas. El usuario aprobó cerrar la spec el 2026-11-01.
 
 ## Evidencias RF por RF (T11, 2026-10-31)
 

@@ -45,6 +45,7 @@ Contexto completo del proyecto para cualquier IA que empiece a trabajar en él. 
 | 015-asistente-de-chat | Asistente de chat sobre los eventos y la disponibilidad común, con un proveedor LLM gratuito (no Gemini) | **Spec aprobada** (2026-10-29), sin plan |
 | 016-calendario-estilo-google | Calendario como Google Calendar en el móvil: bloques rellenos, cabecera con cajón y "+", deslizar, agenda continua y fila de meses (enmienda 4 de la constitución) | **Cerrada** (2026-10-30), T1–T13 hechas; sin migraciones. La prueba en el iPhone se hace en producción |
 | 017-mover-eventos-y-menu | Mover y redimensionar arrastrando, menú contextual en el ordenador, "Deshacer" en los avisos, detalle en hoja inferior en el móvil, pellizcar para ampliar y atajos nuevos (enmienda 5) | **Cerrada** (2026-11-01), T1–T16 hechas; 2 migraciones aplicadas en prod |
+| 018-sincronizacion-icloud | Calendarios de iCloud (iPhone) por CalDAV con contraseña específica de app, con el mismo alcance que Google en la 007 y la 009 (leer, escribir, renombrar, crear y subir). Dependencia `tsdav` aprobada; se instala en la primera tarea | **Spec aprobada** (2026-11-01), plan y tareas aprobados, en implementación; enmienda 6 aplicada |
 
 Las specs 001–004 (cerradas, no se editan) citan la gestión de cuenta como "spec 005" y OAuth como "spec 006": hoy son la 006 y la 007.
 

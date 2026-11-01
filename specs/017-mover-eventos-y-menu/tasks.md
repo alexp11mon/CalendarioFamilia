@@ -209,7 +209,7 @@ Casos límite:
 
 Capturas: 12 a 390, 768 y 1440 px, en claro y oscuro, con el acento rojo y el amarillo, durante un arrastre en la vista semana (solo locales). En oscuro el anillo del bloque levantado apenas se ve; lo distingue la sombra.
 
-Verificación (P8): typecheck, format y build correctos; lint sin errores (los 2 avisos previos); `npm test` con 206 ficheros y 1969 tests en verde. `npm run test:db`: 36 ficheros en verde y 4 caídos por `Request rate limit reached` de Auth en los `beforeAll` (trampa conocida); repetidos con `--no-file-parallelism`, 4 ficheros y 17 tests en verde. Usuario de prueba `t7-drag@cafam.test` borrado de dev.
+Verificación (P8): typecheck, format y build correctos; lint sin errores (los 2 avisos previos); `npm test` con 206 ficheros y 1969 tests en verde. `npm run test:db`: 36 ficheros en verde y 4 caídos por `Request rate limit reached` de Auth en los `beforeAll` (trampa conocida); repetidos con `--no-file-parallelism`, 4 ficheros y 17 tests en verde. Usuario de prueba `t7-drag@cafam.test` borrado de dev. Migraciones `event_undo` y `trash_row` aplicadas en prod con `supabase db push` (2026-11-01).
 
 **No hecho:** la prueba con un calendario traído de Google real (dev, puerto 3000, OAuth). Necesita conectar una cuenta de Google del usuario. La escritura en Google está cubierta solo por tests con el motor simulado (`quick-actions`, `write-event`).
 

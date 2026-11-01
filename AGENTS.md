@@ -12,7 +12,7 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 Contexto completo del proyecto para cualquier IA que empiece a trabajar en él. Léelo entero antes de tocar código. El bloque de arriba lo gestiona `next dev`: no lo edites; todo lo de debajo es documentación del proyecto y `next dev` lo respeta.
 
-> Última actualización: 2026-11-01, al implementar la spec 017 (mover eventos, menú y "Deshacer"), pendiente de cerrar y de aplicar sus 2 migraciones en prod.
+> Última actualización: 2026-11-01, al implementar la spec 017 (mover eventos, menú y "Deshacer"), pendiente de cerrar; sus 2 migraciones ya están aplicadas en prod.
 
 ## 1. Qué es
 
@@ -44,7 +44,7 @@ Contexto completo del proyecto para cualquier IA que empiece a trabajar en él. 
 | 014-comentarios-en-eventos | Comentarios en los eventos por cualquier miembro, Lectores incluidos | **Cerrada** (2026-11-01), T1–T11 hechas; 2 migraciones aplicadas en prod |
 | 015-asistente-de-chat | Asistente de chat sobre los eventos y la disponibilidad común, con un proveedor LLM gratuito (no Gemini) | **Spec aprobada** (2026-10-29), sin plan |
 | 016-calendario-estilo-google | Calendario como Google Calendar en el móvil: bloques rellenos, cabecera con cajón y "+", deslizar, agenda continua y fila de meses (enmienda 4 de la constitución) | **Cerrada** (2026-10-30), T1–T13 hechas; sin migraciones. La prueba en el iPhone se hace en producción |
-| 017-mover-eventos-y-menu | Mover y redimensionar arrastrando, menú contextual en el ordenador, "Deshacer" en los avisos, detalle en hoja inferior en el móvil, pellizcar para ampliar y atajos nuevos (enmienda 5) | **Implementada** (2026-11-01), T1–T15 hechas; T16 pendiente de la prueba con Google y de la aprobación. 2 migraciones aún no aplicadas en prod |
+| 017-mover-eventos-y-menu | Mover y redimensionar arrastrando, menú contextual en el ordenador, "Deshacer" en los avisos, detalle en hoja inferior en el móvil, pellizcar para ampliar y atajos nuevos (enmienda 5) | **Implementada** (2026-11-01), T1–T15 hechas; T16 pendiente de la prueba con Google y de la aprobación; 2 migraciones aplicadas en prod |
 
 Las specs 001–004 (cerradas, no se editan) citan la gestión de cuenta como "spec 005" y OAuth como "spec 006": hoy son la 006 y la 007.
 
@@ -432,7 +432,7 @@ La decisión de acceso es una función pura, `getRouteAccess(pathname, hasSessio
   - `event_comments (id, event_id → events on delete cascade, author_id → profiles on delete set null default auth.uid(), client_id, body 1..1000, created_at, edited_at)`, `unique (author_id, client_id)` (un doble envío se guarda una vez). RLS: leen los miembros del calendario del evento; insertan los miembros como autores; actualiza el autor; borran el autor o `calendar_role_for = 'owner'`. Permisos por columna: `insert (event_id, body, client_id)` y `update (body)`.
   - Trigger `event_comments_rules`: recorta los extremos (`\s`), pone `edited_at` al cambiar el texto y da `22023` en la fila de una serie.
   - `copy_calendar_for_owner` copia los comentarios; `series_loss` devuelve también `comments` (se borró y se creó de nuevo por el cambio de tipo).
-- Añadido por la spec 017 (migraciones `event_undo` y `trash_row`; en dev, **pendientes en prod**):
+- Añadido por la spec 017 (migraciones `event_undo` y `trash_row`; en dev y en prod):
   - `event_trash` (copia del evento, sus imágenes `ready` y sus comentarios, con `deleted_by`): RLS sin políticas y sin permisos para clientes; solo la tocan las funciones. Se guarda la última copia de cada usuario.
   - `snapshot_event(p_event_id, …)` (owner o editor, antes del borrado normal) y `restore_event(p_trash_id, p_event_id default null)` (solo quien borró, en el primer minuto y con el rol aún vigente; `p_event_id` cuelga imágenes y comentarios del evento recreado en Google). `trash_row(p_trash_id)` devuelve la fila guardada a quien borró. Una repetición sin fila se restaura quitando su fecha de `exdates`.
   - `images_claim_purge` deja en la cola los objetos de los últimos 2 minutos, así las imágenes sobreviven al "Deshacer". `pg_cron` `event-trash-purge` (05:00 UTC) borra las copias de más de 1 h; `trash_scheduled_jobs()` es la ayuda de tests.
@@ -653,6 +653,6 @@ La **007 (sincronización de Google, solo lectura, y grupos)** y la **009 (sincr
 - La **016 (calendario al estilo Google)** está cerrada (2026-10-30). Las previews de Vercel están protegidas con su inicio de sesión: para verlas en el móvil hay que entrar en Vercel o usar "Share".
 - La **013 (eventos recurrentes)** está cerrada (2026-10-31), con sus 6 migraciones aplicadas en prod.
 - La **014 (comentarios)** está cerrada (2026-11-01), con sus 2 migraciones aplicadas en prod.
-- La **017 (mover eventos, menú y "Deshacer")** está implementada (2026-11-01, T1–T15) en la rama `017-mover-eventos-y-menu`. Falta T16: la prueba con un calendario traído de Google real, aplicar `event_undo` y `trash_row` en prod y la aprobación del usuario para cerrarla. Al soltar, cambiar el color o borrar una repetición se pregunta el alcance; "Deshacer" solo con "Solo este evento".
+- La **017 (mover eventos, menú y "Deshacer")** está implementada (2026-11-01, T1–T15) en la rama `017-mover-eventos-y-menu`. Falta T16: la prueba con un calendario traído de Google real, y la aprobación del usuario para cerrarla. Al soltar, cambiar el color o borrar una repetición se pregunta el alcance; "Deshacer" solo con "Solo este evento".
 - **Siguiente:** 015 (asistente de chat), con su plan y sus tareas aprobados. Las specs de la 011 a la 015 están aprobadas desde el 2026-10-29.
 - Los usuarios de prueba usan `@cafam.test`. Los antiguos del dominio anterior se borraron de dev en la spec 010 (T5), con permiso del usuario.

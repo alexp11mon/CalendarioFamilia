@@ -284,3 +284,12 @@ export function CaretIcon({ open }: { open: boolean }) {
     </svg>
   );
 }
+
+/** The chosen one in a list of colors: a mark, not only the color (spec 017 RF-35). */
+export function CheckIcon() {
+  return (
+    <Icon>
+      <path d="m5 12.5 4.5 4.5L19 7.5" />
+    </Icon>
+  );
+}

@@ -31,6 +31,7 @@ import type { CalendarEventItem } from "@/lib/calendar/layout";
 import { DEFAULT_CALENDAR_COLOR } from "@/lib/calendar/palette";
 import { UNDO_NOTICES, type Change } from "@/lib/calendar/undo";
 import { useEventDrag, type DragMode } from "@/lib/hooks/use-event-drag";
+import { EventMenu, type MenuChoice } from "./event-menu";
 import { useUndoToast } from "./use-undo-toast";
 
 export type ChangeNotice = "moved" | "resized" | "color";
@@ -52,6 +53,14 @@ export interface EventInteractionsApi {
     pointer: PointerEvent,
     options: { mode: DragMode; resize?: boolean; lifted?: boolean },
   ) => void;
+  /** Opens the context menu at a point; focus goes back to `returnTo` (RF-32, RF-33). */
+  openMenu: (
+    event: CalendarEventItem,
+    at: { left: number; top: number },
+    returnTo: HTMLElement,
+  ) => void;
+  /** The menu is already open for this event (a key may also send `contextmenu`). */
+  isMenuOpen: (event: CalendarEventItem) => boolean;
   change: (
     event: CalendarEventItem,
     change: Change,
@@ -110,6 +119,12 @@ export function useEventInteractionsState<T extends CalendarEventItem>({
   const [dragging, setDragging] = useState(false);
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [liftedId, setLiftedId] = useState<string | null>(null);
+  const [menu, setMenu] = useState<{
+    event: CalendarEventItem;
+    at: { left: number; top: number };
+    returnTo: HTMLElement;
+  } | null>(null);
+  const menuFor = useRef<string | null>(null);
   const [preview, setPreview] = useState<{ id: string; times: Times } | null>(
     null,
   );
@@ -244,6 +259,11 @@ export function useEventInteractionsState<T extends CalendarEventItem>({
       draggingId,
       liftedId,
       startDrag: drag.start,
+      openMenu: (event, at, returnTo) => {
+        menuFor.current = event.id;
+        setMenu({ event, at, returnTo });
+      },
+      isMenuOpen: (event) => menuFor.current === event.id,
       change,
       remove: async (event) => {
         setOverride(event.id, { change: "deleted", pending: true });
@@ -285,8 +305,36 @@ export function useEventInteractionsState<T extends CalendarEventItem>({
     [calendarColors, events, overrides, preview],
   );
 
+  const closeMenu = useCallback(
+    (restoreFocus: boolean) => {
+      menuFor.current = null;
+      if (restoreFocus) menu?.returnTo.focus();
+      setMenu(null);
+    },
+    [menu],
+  );
+
+  const choose = (event: CalendarEventItem, choice: MenuChoice) => {
+    if (choice.kind === "duplicate") {
+      router.push(`/dashboard/events/new?from=${event.id}`);
+    } else if (choice.kind === "delete") {
+      void api.remove(event);
+    } else {
+      void api.change(event, { kind: "color", color: choice.color }, "color");
+    }
+  };
+
   const dialog = (
     <>
+      {menu ? (
+        <EventMenu
+          event={menu.event}
+          at={menu.at}
+          calendarColor={calendarColors.get(menu.event.calendarId)}
+          onChoose={(choice) => choose(menu.event, choice)}
+          onClose={closeMenu}
+        />
+      ) : null}
       {/* The new hours of a dragged event, read as they change (plan D2). */}
       <p role="status" aria-live="polite" className="sr-only">
         {preview ? describeTimes(preview.times, timeZone) : ""}

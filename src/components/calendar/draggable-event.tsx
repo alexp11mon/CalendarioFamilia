@@ -2,6 +2,7 @@
 
 import { useRef, type ComponentProps } from "react";
 import type { DragMode } from "@/lib/hooks/use-event-drag";
+import { boxOf } from "@/lib/calendar/popover";
 import { formatTime } from "@/lib/calendar/time-zone";
 import { EventBlock } from "./event-block";
 import { useEventInteractions } from "./event-interactions";
@@ -41,9 +42,27 @@ export function DraggableEvent({
           touched.current = pointer.pointerType === "touch";
           api.startDrag(event, pointer, { mode, lifted });
         },
-        // A finger held on an event lifts it; the system menu never opens (RF-6).
+        // A finger held on an event lifts it: no menu at all (RF-6, RF-43, plan D13).
         onContextMenu: (menu) => {
-          if (touched.current) menu.preventDefault();
+          menu.preventDefault();
+          if (touched.current || api.isMenuOpen(event)) return;
+          api.openMenu(
+            event,
+            { left: menu.clientX, top: menu.clientY },
+            menu.currentTarget,
+          );
+        },
+        // The Menu key and Shift+F10 open it by the event (RF-33).
+        onKeyDown: (key) => {
+          if (key.key !== "ContextMenu" && !(key.shiftKey && key.key === "F10"))
+            return;
+          key.preventDefault();
+          const box = boxOf(key.currentTarget);
+          api.openMenu(
+            event,
+            { left: box.left, top: box.top + box.height },
+            key.currentTarget,
+          );
         },
       }}
     >

@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { EventComments } from "@/components/comments/event-comments";
 import { EventImages } from "@/components/images/event-images";
@@ -19,7 +20,8 @@ import {
   type CategoryOption,
   type EventFormValues,
 } from "./event-form";
-import { useEventModal } from "./event-modal";
+import { DONE_MESSAGES, useEventModal } from "./event-modal";
+import { useUndoToast } from "./use-undo-toast";
 
 /**
  * An event's detail, which turns into its edit form in the same place
@@ -56,6 +58,8 @@ export function EventPanel({
 }) {
   const modal = useEventModal();
   const [editing, setEditing] = useState(false);
+  const router = useRouter();
+  const showUndo = useUndoToast();
 
   if (editing) {
     return (
@@ -87,7 +91,14 @@ export function EventPanel({
       timeZone={timeZone}
       canEdit={canEdit}
       deleteAction={deleteAction}
-      onDeleted={modal?.finish}
+      onDeleted={
+        modal?.finish ??
+        // A full page goes back to the calendar with the notice (spec 017 RF-25).
+        ((done, undo) => {
+          showUndo(DONE_MESSAGES[done], undo);
+          router.replace("/dashboard/calendar");
+        })
+      }
       comments={<EventComments eventId={detail.id} timeZone={timeZone} />}
       media={
         <>

@@ -3,6 +3,7 @@
 import { useActionState, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { FormAlert } from "@/components/ui/form-alert";
+import type { UndoToken } from "@/lib/calendar/undo";
 import type { ConfirmState, Done, FormAction } from "@/lib/forms/form-state";
 import type { SeriesScope } from "@/lib/recurrence/series-write";
 import { SeriesScopeDialog } from "./series-scope-dialog";
@@ -15,7 +16,7 @@ export function SeriesDelete({
 }: {
   action: FormAction<ConfirmState>;
   limitReached: boolean;
-  onDone?: (done: Done) => void;
+  onDone?: (done: Done, undo?: UndoToken) => void;
 }) {
   const [state, formAction, pending] = useActionState(action, {});
   const [asking, setAsking] = useState(false);
@@ -33,7 +34,7 @@ export function SeriesDelete({
   useEffect(() => {
     if (!state.done || handled.current === state) return;
     handled.current = state;
-    onDone?.(state.done);
+    onDone?.(state.done, state.undo);
   }, [state, onDone]);
 
   return (

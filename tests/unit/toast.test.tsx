@@ -96,3 +96,93 @@ describe("toast leaving", () => {
     expect(screen.getByRole("status")).toBeEmptyDOMElement();
   });
 });
+
+// Spec 017, T5: "Deshacer" in the notice for 10 s, only for the last action
+// (RF-24 to RF-26, RF-30).
+function UndoTrigger({
+  text,
+  undo,
+}: {
+  text: string;
+  undo: () => Promise<string | null>;
+}) {
+  const { show } = useToast();
+  return (
+    <button type="button" onClick={() => show(text, { undo })}>
+      {text}
+    </button>
+  );
+}
+
+describe("toast with Deshacer", () => {
+  it("offers Deshacer for 10 s", () => {
+    render(
+      <ToastProvider>
+        <UndoTrigger text="Evento movido" undo={async () => null} />
+      </ToastProvider>,
+    );
+    act(() => screen.getByRole("button", { name: "Evento movido" }).click());
+    const undo = screen.getByRole("button", { name: "Deshacer" });
+    expect(undo.className).toContain("min-h-11");
+
+    act(() => vi.advanceTimersByTime(9999));
+    expect(screen.getByRole("button", { name: "Deshacer" })).toBeVisible();
+    act(() => vi.advanceTimersByTime(1));
+    expect(screen.queryByRole("button", { name: "Deshacer" })).toBeNull();
+  });
+
+  it("undoes, then says so", async () => {
+    const undo = vi.fn(async () => null);
+    render(
+      <ToastProvider>
+        <UndoTrigger text="Evento movido" undo={undo} />
+      </ToastProvider>,
+    );
+    act(() => screen.getByRole("button", { name: "Evento movido" }).click());
+    await act(async () =>
+      screen.getByRole("button", { name: "Deshacer" }).click(),
+    );
+
+    expect(undo).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole("status")).toHaveTextContent("Deshecho");
+    expect(screen.queryByRole("button", { name: "Deshacer" })).toBeNull();
+  });
+
+  it("shows why it could not undo", async () => {
+    render(
+      <ToastProvider>
+        <UndoTrigger text="Evento movido" undo={async () => "Ha cambiado"} />
+      </ToastProvider>,
+    );
+    act(() => screen.getByRole("button", { name: "Evento movido" }).click());
+    await act(async () =>
+      screen.getByRole("button", { name: "Deshacer" }).click(),
+    );
+    expect(screen.getByRole("status")).toHaveTextContent("Ha cambiado");
+  });
+
+  it("a new notice drops the Deshacer of the previous one", () => {
+    const first = vi.fn(async () => null);
+    function Both() {
+      const { show } = useToast();
+      return (
+        <>
+          <button type="button" onClick={() => show("Uno", { undo: first })}>
+            Uno
+          </button>
+          <button type="button" onClick={() => show("Dos")}>
+            Dos
+          </button>
+        </>
+      );
+    }
+    render(
+      <ToastProvider>
+        <Both />
+      </ToastProvider>,
+    );
+    act(() => screen.getByRole("button", { name: "Uno" }).click());
+    act(() => screen.getByRole("button", { name: "Dos" }).click());
+    expect(screen.queryByRole("button", { name: "Deshacer" })).toBeNull();
+  });
+});

@@ -15,14 +15,15 @@ import {
 } from "react";
 import { CloseIcon, ExpandIcon } from "@/components/shell/icons";
 import { Button } from "@/components/ui/button";
-import { useToast } from "@/components/ui/toast";
+import type { UndoToken } from "@/lib/calendar/undo";
 import type { Done } from "@/lib/forms/form-state";
 import { WRITE_ERRORS } from "@/lib/sync/write-errors";
+import { useUndoToast } from "./use-undo-toast";
 
 const ICON_BUTTON =
   "inline-flex size-11 shrink-0 items-center justify-center rounded-full text-ink transition-colors hover:bg-stone focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink";
 
-const DONE_MESSAGES: Record<Done, string> = {
+export const DONE_MESSAGES: Record<Done, string> = {
   created: "Evento creado",
   updated: "Cambios guardados",
   deleted: "Evento borrado",
@@ -34,8 +35,8 @@ interface EventModalApi {
   setDirty: (dirty: boolean) => void;
   /** Close as the user asked, with the unsaved-changes check. */
   requestClose: () => void;
-  /** A save or delete succeeded: close, refresh the calendar and say so (RF-8, RF-32). */
-  finish: (done: Done) => void;
+  /** A save or delete succeeded: close, refresh the calendar and say so (RF-8, RF-32), with "Deshacer" after a deletion (spec 017 RF-25). */
+  finish: (done: Done, undo?: UndoToken) => void;
 }
 
 const EventModalContext = createContext<EventModalApi | null>(null);
@@ -58,7 +59,7 @@ export function EventModal({
   children: ReactNode;
 }) {
   const router = useRouter();
-  const { show } = useToast();
+  const show = useUndoToast();
   const dialog = useRef<HTMLDialogElement>(null);
   const titleId = useId();
   const [fullscreen, setFullscreen] = useState(false);
@@ -101,9 +102,9 @@ export function EventModal({
         dirty.current = value;
       },
       requestClose,
-      finish: (done) => {
+      finish: (done, undo) => {
         dirty.current = false;
-        show(DONE_MESSAGES[done]);
+        show(DONE_MESSAGES[done], undo);
         router.back();
         // The router cache may still hold the calendar without the change (plan R2).
         router.refresh();

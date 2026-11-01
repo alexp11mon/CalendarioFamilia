@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 import {
@@ -156,17 +156,19 @@ describe("EventDetail permissions and deletion (RF-23, RF-24, RF-26)", () => {
     expect(screen.queryByRole("link")).not.toBeInTheDocument();
   });
 
-  it("asks for confirmation before deleting, then deletes", async () => {
+  it("deletes at once, without asking, and hands over the undo (spec 017 RF-31)", async () => {
     const user = userEvent.setup();
-    const remove = setup();
+    const undo = { kind: "restore" as const, trashId: "t1" };
+    const onDeleted = vi.fn();
+    const remove = vi.fn(async () => ({ done: "deleted" as const, undo }));
+    setup({ deleteAction: remove, onDeleted });
 
     await user.click(screen.getByRole("button", { name: "Borrar evento" }));
-    const dialog = screen.getByRole("dialog");
-    expect(dialog).toHaveAccessibleName("¿Borrar «Matemáticas»?");
-    expect(remove).not.toHaveBeenCalled();
 
-    await user.click(screen.getByRole("button", { name: "Sí, borrar" }));
-
+    expect(screen.queryByRole("dialog")).toBeNull();
+    await waitFor(() =>
+      expect(onDeleted).toHaveBeenCalledWith("deleted", undo),
+    );
     expect(remove).toHaveBeenCalledTimes(1);
   });
 

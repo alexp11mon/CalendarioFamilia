@@ -2,7 +2,8 @@ import type { ReactNode } from "react";
 import { formatEventWhen } from "@/lib/calendar/format";
 import type { ConfirmState, Done, FormAction } from "@/lib/forms/form-state";
 import { SeriesDelete } from "@/components/recurrence/series-delete";
-import { ConfirmDialog } from "./confirm-dialog";
+import type { UndoToken } from "@/lib/calendar/undo";
+import { DeleteEventButton } from "./delete-event-button";
 
 export interface EventDetailData {
   id: string;
@@ -65,7 +66,7 @@ export function EventDetail({
   deleteAction: FormAction<ConfirmState>;
   /** More buttons next to "Borrar evento" (spec 008: Editar, Duplicar). */
   actions?: ReactNode;
-  onDeleted?: (done: Done) => void;
+  onDeleted?: (done: Done, undo?: UndoToken) => void;
   /** The event's images and "Añadir imágenes" (spec 012 RF-1, RF-9). */
   media?: ReactNode;
   /** "Comentarios", for any member (spec 014 RF-1, RF-7). */
@@ -124,14 +125,7 @@ export function EventDetail({
               onDone={onDeleted}
             />
           ) : (
-            <ConfirmDialog
-              triggerLabel="Borrar evento"
-              title={`¿Borrar «${event.title}»?`}
-              description="El evento se borrará de forma definitiva."
-              confirmLabel="Sí, borrar"
-              action={deleteAction}
-              onDone={onDeleted}
-            />
+            <DeleteEventButton action={deleteAction} onDone={onDeleted} />
           )}
         </div>
       ) : null}

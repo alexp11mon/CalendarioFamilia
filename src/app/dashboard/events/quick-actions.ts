@@ -20,7 +20,9 @@ import {
   type Change,
   type UndoToken,
 } from "@/lib/calendar/undo";
+import type { ConfirmState } from "@/lib/forms/form-state";
 import { parseEventId } from "@/lib/recurrence/occurrence-id";
+import type { SeriesScope } from "@/lib/recurrence/series-write";
 import { canWriteEvents, readOnlyReason } from "@/lib/sync/read-only";
 import type { EventRowInput } from "@/lib/sync/write-event";
 import { WRITE_ERRORS } from "@/lib/sync/write-errors";
@@ -299,4 +301,25 @@ export async function pasteEvent(
   } catch (error) {
     return errorOf(error);
   }
+}
+
+/**
+ * "Borrar evento" of the detail: no confirmation, and the undo token for the
+ * notice (RF-25, RF-31). An occurrence sends its scope and the loss
+ * confirmation from SeriesScopeDialog, as the form of spec 013 did.
+ */
+export async function deleteFromDetail(
+  id: string,
+  _prevState: ConfirmState,
+  formData: FormData,
+): Promise<ConfirmState> {
+  const scope = formData.get("scope");
+  const result = await deleteForUndo(id, {
+    scope: typeof scope === "string" ? (scope as SeriesScope) : undefined,
+    confirmLoss: formData.get("confirmLoss") === "1",
+  });
+  if (result.ok) return { done: "deleted", undo: result.undo };
+  if (result.gone) return { done: "gone" };
+  if (result.loss) return { loss: result.loss };
+  return { formError: result.error };
 }

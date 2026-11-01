@@ -134,15 +134,17 @@ describe("EventPanel", () => {
       inWindow: true,
       deleteAction: vi.fn(async (): Promise<ConfirmState> => ({
         done: "deleted",
+        undo: { kind: "restore", trashId: "t1" },
       })),
     });
 
     await userEvent.click(
       screen.getByRole("button", { name: "Borrar evento" }),
     );
-    await userEvent.click(screen.getByRole("button", { name: "Sí, borrar" }));
 
+    // Spec 017 RF-25, RF-31: no confirmation, and "Deshacer" in the notice.
     expect(await screen.findByText("Evento borrado")).toBeVisible();
+    expect(screen.getByRole("button", { name: "Deshacer" })).toBeVisible();
     expect(router.back).toHaveBeenCalledTimes(1);
   });
 

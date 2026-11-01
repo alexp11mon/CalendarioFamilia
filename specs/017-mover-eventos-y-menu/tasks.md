@@ -74,12 +74,13 @@
   Hecho cuando: `npm test -- quick-actions` en verde. Cubre: RF-25, RF-27, RF-28, RF-29, RF-40, RF-55, RF-58, RF-59, RF-60, RF-61 | Módulo: quick-actions, undo-core
   Evidencia (2026-11-01): `deleteForUndo`, `undoAction` y `pasteEvent` en `quick-actions.ts`; `placeAt` en `drag.ts` (3 tests). Para restaurar en Google hacía falta leer la fila guardada: migración nueva `20261101110000_trash_row.sql` (`trash_row`, solo para quien borró), en rojo y luego en verde en `event-undo.test.ts` (12 tests). Los tests de las tres acciones se escribieron junto con ellas (no hubo una ejecución en rojo separada): `quick-actions.test.ts` 37 tests en verde. typecheck, format y build correctos, lint con los 2 avisos previos, `npm test` completo en verde.
 
-- [ ] T5 Ofrecer "Deshacer" en los avisos y borrar desde el detalle sin confirmar
+- [x] T5 Ofrecer "Deshacer" en los avisos y borrar desde el detalle sin confirmar
   Pasos:
   - Primero, en rojo: `toast.test.tsx` (con `undo` dura 10 s y pinta "Deshacer" con `min-h-11`; un aviso nuevo quita el "Deshacer" anterior; al pulsar ejecuta, quita el aviso y muestra "Deshecho" o el error) y `event-detail.test.tsx` (borrar un evento suelto no abre `ConfirmDialog`, llama a `deleteForUndo` y cierra con "Evento borrado" y "Deshacer"; una repetición sigue con el diálogo de alcance).
   - Después, `ToastProvider.show(text, { undo })`, `finish(done, undo?)` en `EventModal` y el borrado del detalle.
 
   Hecho cuando: `npm test -- toast event-detail event-modal event-panel` en verde y captura del aviso con "Deshacer" a 390 y 1440 px. Cubre: RF-24, RF-25, RF-26, RF-30, RF-31 | Módulo: toast-undo, undo-core
+  Evidencia (2026-11-01): rojo en 5 tests (`toast`, `event-detail`, `event-panel`). `ToastProvider.show(text, { undo })` con 10 s y "Deshacer"; `useUndoToast` llama a `undoAction`; `DeleteEventButton` borra sin confirmar; acción `deleteFromDetail` en las dos rutas del detalle (`deleteEvent` queda solo para sus tests); `finish(done, undo)`. `toast event-detail event-modal event-panel` en verde. typecheck, format y build correctos, lint con los 2 avisos previos, `npm test` completo en verde. La captura del aviso se hizo con las del navegador de T7.
 
 - [ ] T6 Aplicar en el calendario los cambios hechos fuera del formulario
   Pasos:

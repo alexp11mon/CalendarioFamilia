@@ -3,7 +3,8 @@ import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { EventPanel } from "@/components/calendar/event-panel";
 import { PageShell } from "@/components/calendar/page-shell";
-import { deleteEvent, updateEvent } from "../actions";
+import { updateEvent } from "../actions";
+import { deleteFromDetail } from "../quick-actions";
 import { loadEvent } from "../load-event";
 
 export const metadata: Metadata = { title: "Evento" };
@@ -26,7 +27,7 @@ async function Event({ params }: { params: Promise<{ id: string }> }) {
       calendars={data.calendars}
       categories={data.categories}
       updateAction={updateEvent.bind(null, id)}
-      deleteAction={deleteEvent.bind(null, id)}
+      deleteAction={deleteFromDetail.bind(null, id)}
     />
   );
 }

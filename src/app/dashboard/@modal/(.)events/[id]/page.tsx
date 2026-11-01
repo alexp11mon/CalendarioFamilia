@@ -2,7 +2,8 @@ import { Suspense } from "react";
 import { EventModal } from "@/components/calendar/event-modal";
 import { EventPanel } from "@/components/calendar/event-panel";
 import { GoneEvent } from "@/components/calendar/gone-event";
-import { deleteEvent, updateEvent } from "../../../events/actions";
+import { updateEvent } from "../../../events/actions";
+import { deleteFromDetail } from "../../../events/quick-actions";
 import { loadEvent } from "../../../events/load-event";
 
 // Reads the session and the route param, so it streams behind <Suspense> (cacheComponents).
@@ -30,7 +31,7 @@ async function InterceptedEvent({
         calendars={data.calendars}
         categories={data.categories}
         updateAction={updateEvent.bind(null, id)}
-        deleteAction={deleteEvent.bind(null, id, "modal")}
+        deleteAction={deleteFromDetail.bind(null, id)}
       />
     </EventModal>
   );

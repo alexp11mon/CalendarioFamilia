@@ -1,4 +1,5 @@
 import type { z } from "zod";
+import type { UndoToken } from "@/lib/calendar/undo";
 
 // Generic result of the spec 002 Server Actions (plan "Estado de las Server Actions").
 // The auth forms keep their own state types in lib/auth/form-state.ts.
@@ -32,6 +33,8 @@ export interface ConfirmState {
   formError?: string;
   done?: Done;
   loss?: Loss;
+  /** How to undo a deletion from the notice (spec 017 RF-25). */
+  undo?: UndoToken;
 }
 
 export type ParseResult<Data, Field extends string> =

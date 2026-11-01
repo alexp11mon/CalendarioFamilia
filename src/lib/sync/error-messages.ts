@@ -14,3 +14,12 @@ export const CONNECT_ERRORS: Record<ConnectError, string> = {
 export function isConnectError(value: unknown): value is ConnectError {
   return typeof value === "string" && Object.hasOwn(CONNECT_ERRORS, value);
 }
+
+/** Connecting iCloud (spec 018 RF-6, RF-8, RF-11). */
+export const ICLOUD_CONNECT_ERRORS = {
+  rejected:
+    "iCloud no ha aceptado el Apple ID o la contraseña. Hace falta una contraseña específica de app creada en account.apple.com, no la contraseña normal del Apple ID.",
+  transient:
+    "iCloud no responde. No se ha conectado la cuenta; vuelve a intentarlo dentro de un momento.",
+  max: CONNECT_ERRORS.max,
+} as const;

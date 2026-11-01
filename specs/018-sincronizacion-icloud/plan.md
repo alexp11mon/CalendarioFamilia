@@ -238,6 +238,16 @@ Antes de programar, con una cuenta real de iCloud del usuario y un script en el 
 
 Si algo de (e) a (g) no funciona como se espera, se vuelve al usuario antes de la T2.
 
+### Resultado de la T1 (2026-11-01)
+
+- `tsdav@2.5.0` instalada con versión exacta. Carga en Node 24 (`createAccount`, `fetchCalendars`, `fetchCalendarObjects`, `makeCalendar` y `davRequest`) y admite un `fetch` inyectado en cada llamada.
+- El script de las comprobaciones (a) a (i) está en `specs/018-sincronizacion-icloud/icloud-check.mjs`. Lee las credenciales de `.env.local` y no las imprime; solo crea y borra dos calendarios "CaFam prueba T1". **Pendiente de que el usuario lo ejecute** con una cuenta real (`node specs/018-sincronizacion-icloud/icloud-check.mjs` desde la raíz del proyecto) y se anote aquí su salida.
+- Decisión del usuario (2026-11-01): hacer todas las tareas posibles sin esperar. Para que el resultado de la cuenta real no obligue a cambiar el código:
+  - D9: `moveEvent` intenta `MOVE` y, si iCloud responde `403`, `405`, `501` o `502`, hace `PUT` en el destino y `DELETE` en el origen.
+  - D14: renombrar usa `PROPPATCH`; si iCloud lo rechaza, RF-52 ya obliga a no guardarlo y explicarlo. Solo si la comprobación (g) confirma que nunca se puede, se deshabilita el campo.
+  - (b): la contraseña se normaliza a la forma con guiones que muestra Apple (`xxxx-xxxx-xxxx-xxxx`).
+  - (a): hosts permitidos `caldav.icloud.com` y `p<número>-caldav.icloud.com`, según las guías consultadas.
+
 ## Pasos de producción (los ejecuta el usuario)
 
 1. Migración a prod: `npx supabase link --project-ref yznbdoskvtxeasujtirk`, `npx supabase db push` y `npx supabase link --project-ref uthubyzhonrtrmbcqcjh` (volver a dev). Aplica `icloud_provider`.

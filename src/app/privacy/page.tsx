@@ -4,7 +4,7 @@ import { Logo } from "@/components/brand/logo";
 
 export const metadata: Metadata = { title: "Política de privacidad" };
 
-const UPDATED = "29 de octubre de 2026";
+const UPDATED = "1 de noviembre de 2026";
 
 function Section({
   title,
@@ -150,6 +150,39 @@ export default function PrivacyPage() {
               cuentas borradas que explica CaFam antes de confirmar.
             </li>
           </ul>
+        </Section>
+
+        <Section title="Calendarios de iCloud">
+          <p>
+            Si conectas una cuenta de iCloud, CaFam hace con sus calendarios lo
+            mismo que con Google: lee los que eliges (nombre, color y eventos
+            desde 6 meses antes de hoy hasta 1 año después) y escribe en ellos
+            solo lo que tú o un Editor hacéis en CaFam. Nunca borra calendarios
+            de iCloud, salvo el que acaba de crear si una subida falla a medias.
+          </p>
+          <p>
+            Para eso usa tu Apple ID y una contraseña específica de app que
+            creas tú. Esa contraseña también da acceso a tu correo y a tus
+            contactos de iCloud, pero CaFam solo la usa para los calendarios y
+            habla solo con los servidores de Apple.
+          </p>
+          <p>
+            La contraseña se guarda cifrada en la base de datos de CaFam y solo
+            la usa el servidor: nunca llega a tu navegador ni al de otras
+            personas, y nadie puede volver a verla. Al desconectar la cuenta se
+            borra.
+          </p>
+          <p>
+            CaFam no puede revocarla por ti: hazlo cuando quieras en{" "}
+            <a
+              href="https://account.apple.com/"
+              className="font-semibold underline decoration-control underline-offset-4 hover:decoration-ink"
+            >
+              account.apple.com
+            </a>
+            , en «Contraseñas específicas de app». Cambiar la contraseña de tu
+            Apple ID también las revoca todas.
+          </p>
         </Section>
 
         <Section title="Contacto">

@@ -45,6 +45,29 @@ describe("/privacy (RF-39)", () => {
   });
 });
 
+// Spec 018, T14: iCloud in the policy (RF-12, RF-69).
+describe("/privacy with iCloud (RF-69)", () => {
+  it("explains what is read and written in iCloud, where the password is kept, with whom and how to revoke it", () => {
+    render(<PrivacyPage />);
+
+    expect(
+      screen.getByRole("heading", { name: "Calendarios de iCloud" }),
+    ).toBeInTheDocument();
+    for (const text of [
+      /contraseña específica de app/,
+      /también da acceso a tu correo y a tus contactos de iCloud/,
+      /La contraseña se guarda cifrada.*nunca llega a tu navegador/,
+      /solo con los servidores de Apple/,
+      /lo mismo que con Google/,
+    ]) {
+      expect(screen.getByText(text)).toBeInTheDocument();
+    }
+    expect(
+      screen.getByRole("link", { name: "account.apple.com" }),
+    ).toHaveAttribute("href", "https://account.apple.com/");
+  });
+});
+
 describe("home page (RF-40)", () => {
   it("links the privacy policy", () => {
     render(<HomePage />);

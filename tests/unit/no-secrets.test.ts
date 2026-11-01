@@ -152,3 +152,26 @@ describe("spec 009 write engine (T13)", () => {
     expect(leaks).toEqual([]);
   });
 });
+
+// Spec 018, T14: the CalDAV client and the iCloud password stay on the server.
+describe("spec 018 iCloud (T14)", () => {
+  it("tsdav is imported only by the iCloud provider", () => {
+    expect(
+      FILES.filter(({ content }) => /from\s+["']tsdav["']/.test(content)).map(
+        (f) => f.path,
+      ),
+    ).toEqual(["lib/sync/providers/icloud.ts"]);
+  });
+
+  it("no client component imports the iCloud provider or its credential", () => {
+    const leaks = FILES.filter(({ content }) => isClient(content)).flatMap(
+      ({ path, content }) =>
+        /from\s+["'][^"']*(providers\/icloud|icloud-credentials|icloud-ics)["']/.test(
+          content,
+        )
+          ? [path]
+          : [],
+    );
+    expect(leaks).toEqual([]);
+  });
+});

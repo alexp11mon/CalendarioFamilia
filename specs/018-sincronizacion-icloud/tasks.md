@@ -1,6 +1,6 @@
 # Tasks 018 - Sincronización con iCloud (calendarios del iPhone)
 
-> Estado: **Aprobadas** por el usuario (2026-11-01). T1–T14 hechas (la T1 con la cuenta real del usuario, resultado en el plan) y T15 a medias (verificación en dev hecha, faltan producción, la demo en el iPhone y el cierre).
+> Estado: **Cerradas** (2026-11-01). T1–T15 hechas; el usuario aprobó cerrar la spec.
 > Spec: `specs/018-sincronizacion-icloud/spec.md` (aprobada, 2026-11-01). Plan: `specs/018-sincronizacion-icloud/plan.md` (aprobado, 2026-11-01).
 > 15 tareas en tres iteraciones: T1–T9 (comprobaciones, base y piezas de iCloud), T10–T14 (motor y pantallas) y T15 (validación). No se empieza una iteración sin cerrar la anterior.
 > Reglas:
@@ -77,7 +77,7 @@
 
 ### Iteración 3 — Validación
 
-- [ ] T15 Validar la spec en dev y en producción y cerrarla
+- [x] T15 Validar la spec en dev y en producción y cerrarla
   Pasos: verificación completa de P8 (`typecheck`, `lint`, `format:check`, `test`, `build`, `test:db`); demo en dev con la cuenta de la T1; el usuario aplica la migración a prod y despliega (plan, "Pasos de producción"); demo de los criterios de finalización de la spec en producción con un iPhone; tabla RF → test en "Evidencias"; actualizar `AGENTS.md`.
   Hecho cuando: la verificación completa en verde con su salida reportada, la demo de producción anotada sin credenciales y el usuario aprueba cerrar la spec. Cubre: todos | Módulo: validación
 
@@ -96,7 +96,8 @@ Verificación completa (P8) del 2026-11-01 en la rama, tras la T14:
 
 - Migraciones `icloud_provider` y `sync_write_context_provider` aplicadas en producción por el usuario (2026-11-01), tras un `db push --dry-run` que listaba solo esas dos.
 
-Pendiente: integrar en `main`, la demo en el iPhone y la aprobación del cierre (T15).
+- Integrada en `main` (`21285ab`) y desplegada en Vercel por el usuario (2026-11-01).
+- Demo en producción con el iPhone hecha por el usuario, que aprobó cerrar la spec el 2026-11-01. No anotó resultados detallados.
 
 ## Trazabilidad RF -> Tareas
 

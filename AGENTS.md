@@ -12,7 +12,7 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 Contexto completo del proyecto para cualquier IA que empiece a trabajar en él. Léelo entero antes de tocar código. El bloque de arriba lo gestiona `next dev`: no lo edites; todo lo de debajo es documentación del proyecto y `next dev` lo respeta.
 
-> Última actualización: 2026-11-01, al implementar la spec 018 (iCloud) en la rama `018-sincronizacion-icloud`: T1–T14 hechas (comprobada con una cuenta real), con sus 2 migraciones aplicadas en prod; pendiente la demo en el iPhone (T15).
+> Última actualización: 2026-11-01, al cerrar la spec 018 (sincronización con iCloud), con sus 2 migraciones aplicadas en prod.
 
 ## 1. Qué es
 
@@ -45,7 +45,7 @@ Contexto completo del proyecto para cualquier IA que empiece a trabajar en él. 
 | 015-asistente-de-chat | Asistente de chat sobre los eventos y la disponibilidad común, con un proveedor LLM gratuito (no Gemini) | **Spec aprobada** (2026-10-29), sin plan |
 | 016-calendario-estilo-google | Calendario como Google Calendar en el móvil: bloques rellenos, cabecera con cajón y "+", deslizar, agenda continua y fila de meses (enmienda 4 de la constitución) | **Cerrada** (2026-10-30), T1–T13 hechas; sin migraciones. La prueba en el iPhone se hace en producción |
 | 017-mover-eventos-y-menu | Mover y redimensionar arrastrando, menú contextual en el ordenador, "Deshacer" en los avisos, detalle en hoja inferior en el móvil, pellizcar para ampliar y atajos nuevos (enmienda 5) | **Cerrada** (2026-11-01), T1–T16 hechas; 2 migraciones aplicadas en prod |
-| 018-sincronizacion-icloud | Calendarios de iCloud (iPhone) por CalDAV con contraseña específica de app, con el mismo alcance que Google en la 007 y la 009 (leer, escribir, renombrar, crear y subir). Dependencia `tsdav` aprobada; se instala en la primera tarea | **Implementada** (2026-11-01) en la rama `018-sincronizacion-icloud`, T1–T14 hechas; 2 migraciones aplicadas en prod; pendiente la demo (T15); enmienda 6 aplicada |
+| 018-sincronizacion-icloud | Calendarios de iCloud (iPhone) por CalDAV con contraseña específica de app, con el mismo alcance que Google en la 007 y la 009 (leer, escribir, renombrar, crear y subir). Dependencia `tsdav` aprobada; se instala en la primera tarea | **Cerrada** (2026-11-01), T1–T15 hechas; 2 migraciones aplicadas en prod; enmienda 6 aplicada |
 
 Las specs 001–004 (cerradas, no se editan) citan la gestión de cuenta como "spec 005" y OAuth como "spec 006": hoy son la 006 y la 007.
 
@@ -178,7 +178,7 @@ Añadido por la spec 017 (en producción desde el 2026-11-01):
 - **Detalle en hoja inferior en el móvil** (`EventModal variant="sheet"`, solo el detalle interceptado a ≤ 768 px): abre a media altura, el asa (o deslizar 60 px o a 0,5 px/ms, `sheet.ts`) amplía, reduce o cierra, tocar el fondo cierra, y "Editar" o E la amplían.
 - **Pellizcar o Ctrl + rueda** cambian la altura de las horas en semana y día (24–144 px, `zoom.ts` y `use-grid-zoom.ts`), con la hora bajo el gesto fija; se recuerda en el dispositivo (`localStorage` `cafam-hour-px`).
 
-Añadido por la spec 018 (implementada en la rama `018-sincronizacion-icloud`, aún no en producción):
+Añadido por la spec 018 (en producción desde el 2026-11-01):
 
 - **Conectar iCloud** (`/dashboard/connections/new?provider=icloud`, botón "Conectar iCloud" junto a "Conectar Google"): aviso con los pasos para crear una contraseña específica de app en account.apple.com (hace falta la verificación en dos pasos) y lo que abre esa contraseña, y formulario con Apple ID y contraseña. `connectIcloud` normaliza (Apple ID en minúsculas, contraseña `abcd-efgh-ijkl-mnop`), la comprueba con un descubrimiento CalDAV real en 10 s (`verifyIcloudCredential`) y la guarda con `connect_account('icloud', …)`: en Vault va el JSON `{"v":1,"username","password"}` en lugar del token de Google, y `can_write` siempre es `true`. La contraseña nunca vuelve al navegador. Cuenta en el límite de 5 cuentas junto a las de Google.
 - **Proveedores** (`lib/sync/providers/`): `types.ts` define `ProviderSession` (listar calendarios y eventos, crear, cambiar, mover y borrar eventos, crear, renombrar y borrar calendarios); `index.ts` abre la sesión de cada conexión (`openSession`: Google renueva su token, iCloud lee la credencial) y `revokeAccess` (iCloud no revoca nada: se hace en Apple). El motor, la escritura, la subida y la creación de calendarios ya no saben qué proveedor hay detrás.
@@ -669,6 +669,6 @@ La **007 (sincronización de Google, solo lectura, y grupos)** y la **009 (sincr
 - La **013 (eventos recurrentes)** está cerrada (2026-10-31), con sus 6 migraciones aplicadas en prod.
 - La **014 (comentarios)** está cerrada (2026-11-01), con sus 2 migraciones aplicadas en prod.
 - La **017 (mover eventos, menú y "Deshacer")** está cerrada (2026-11-01), con sus 2 migraciones aplicadas en prod. Al soltar, cambiar el color o borrar una repetición se pregunta el alcance; "Deshacer" solo con "Solo este evento".
-- La **018 (iCloud)** está implementada en la rama `018-sincronizacion-icloud` (T1–T14; la comprobación con una cuenta real confirmó `MOVE` y renombrar). Sus 2 migraciones ya están en prod. Falta: integrar en `main` y la demo en el iPhone para cerrarla (T15).
-- **Siguiente:** cerrar la 018 y después la 015 (asistente de chat), con su plan y sus tareas aprobados. Las specs de la 011 a la 015 están aprobadas desde el 2026-10-29.
+- La **018 (iCloud)** está cerrada (2026-11-01), con sus 2 migraciones aplicadas en prod. La comprobación con una cuenta real confirmó `MOVE` y renombrar.
+- **Siguiente:** 015 (asistente de chat), con su plan y sus tareas aprobados. Las specs de la 011 a la 015 están aprobadas desde el 2026-10-29.
 - Los usuarios de prueba usan `@cafam.test`. Los antiguos del dominio anterior se borraron de dev en la spec 010 (T5), con permiso del usuario.

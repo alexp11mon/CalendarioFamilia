@@ -1,6 +1,6 @@
 # Spec 018 — Sincronización con iCloud (calendarios del iPhone)
 
-> Estado: **Aprobada** (2026-11-01) por el usuario. La enmienda 6 de la constitución se aplicó al aprobarla.
+> Estado: **Cerrada** (2026-11-01). Aprobada por el usuario el 2026-11-01. La enmienda 6 de la constitución se aplicó al aprobarla.
 > Parte de las specs 007 (sincronización con Google, cuentas conectadas y grupos) y 009 (escritura en Google), cerradas. Su objetivo es que los calendarios de iCloud funcionen en CaFam igual que los de Google. Lo que no se dice aquí sigue las reglas de la 007 y la 009 para Google, aplicadas a iCloud. Constitución: `docs/constitution.md` (P9 para lo visual).
 > Decisiones del usuario (2026-11-01):
 >

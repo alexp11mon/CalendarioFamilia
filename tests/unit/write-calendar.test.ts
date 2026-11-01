@@ -126,7 +126,11 @@ describe("renameSyncedCalendar (RF-29 to RF-31)", () => {
   it("does not save when Google refuses (RF-30)", async () => {
     google = () =>
       json({ error: { code: 403, errors: [{ reason: "forbidden" }] } }, 403);
-    expect(await rename()).toEqual({ status: "failed", failure: "rejected" });
+    expect(await rename()).toEqual({
+      status: "failed",
+      failure: "rejected",
+      provider: "google",
+    });
     expect(calls.some((c) => c.fn === "sync_update_calendar")).toBe(false);
   });
 
@@ -192,6 +196,10 @@ describe("createSyncedCalendar (RF-32, RF-33, D15)", () => {
 
   it("says Google does not answer", async () => {
     google = () => json({ error: { code: 503 } }, 503);
-    expect(await create()).toEqual({ status: "failed", failure: "transient" });
+    expect(await create()).toEqual({
+      status: "failed",
+      failure: "transient",
+      provider: "google",
+    });
   });
 });

@@ -5,7 +5,8 @@ import { utcDateKey, zonedDateKey } from "@/lib/calendar/time-zone";
 import type { Change, UndoToken } from "@/lib/calendar/undo";
 import type { Loss } from "@/lib/forms/form-state";
 import { SERIES_SCOPES, type SeriesScope } from "@/lib/recurrence/series-write";
-import { WRITE_ERRORS } from "@/lib/sync/write-errors";
+import { isGoneDone, type GoneDone } from "@/lib/sync/provider-labels";
+import { goneText } from "@/lib/sync/write-errors";
 import {
   changeOccurrence,
   refresh,
@@ -20,7 +21,7 @@ import {
 
 export type QuickResult =
   | { ok: true; id: string; undo?: UndoToken }
-  | { ok: false; error: string; gone?: true; loss?: Loss };
+  | { ok: false; error: string; gone?: GoneDone; loss?: Loss };
 
 export interface ScopeOptions {
   scope?: SeriesScope;
@@ -135,9 +136,9 @@ export async function applyChange(
       )
     : await updateSingle(supabase, event, data, values);
 
-  if (saved === "gone") {
+  if (isGoneDone(saved)) {
     refresh();
-    return { ok: false, gone: true, error: WRITE_ERRORS.gone };
+    return { ok: false, gone: saved, error: goneText(saved) };
   }
   if (!("id" in saved)) return fromState(saved);
   refresh();

@@ -1,6 +1,7 @@
 import { MAX_CALENDARS_PER_ACCOUNT } from "./limits";
 import { openSession } from "./providers";
-import type { ProviderSession } from "./providers/types";
+import { providerOrGoogle } from "./provider-labels";
+import type { ProviderName, ProviderSession } from "./providers/types";
 import type { SyncDeps } from "./run-sync";
 import { writeFailureOf, type WriteFailure } from "./write-errors";
 
@@ -11,7 +12,11 @@ import { writeFailureOf, type WriteFailure } from "./write-errors";
 export type CalendarWriteResult =
   | { status: "normal" }
   | { status: "done"; calendarId?: string }
-  | { status: "failed"; failure: Exclude<WriteFailure, "gone"> }
+  | {
+      status: "failed";
+      failure: Exclude<WriteFailure, "gone">;
+      provider: ProviderName;
+    }
   | { status: "forbidden" }
   | { status: "notFound" }
   | { status: "limit" }
@@ -26,12 +31,16 @@ async function call(deps: SyncDeps, fn: string, args: Record<string, unknown>) {
   )(fn, { p_secret: deps.secret, ...args });
 }
 
-/** A calendar that no longer exists in Google cannot be renamed: Google refused. */
-function failed(error: unknown): CalendarWriteResult {
+/** A calendar that no longer exists in the provider cannot be renamed: it refused. */
+export function failed(
+  error: unknown,
+  provider: ProviderName,
+): CalendarWriteResult {
   const failure = writeFailureOf(error);
   return {
     status: "failed",
     failure: failure === "gone" ? "rejected" : failure,
+    provider,
   };
 }
 
@@ -74,12 +83,12 @@ export async function renameSyncedCalendar(
   try {
     const session = await openSession(
       deps,
-      synced.provider ?? "google",
+      providerOrGoogle(synced.provider),
       synced.connection_id,
     );
     await session.renameCalendar(synced.external_id, input.name);
   } catch (error) {
-    return failed(error);
+    return failed(error, providerOrGoogle(synced.provider));
   }
 
   const saved = await call(deps, "sync_update_calendar", {
@@ -119,7 +128,7 @@ export async function createSyncedCalendar(
   try {
     session = await openSession(
       deps,
-      connection.provider ?? "google",
+      providerOrGoogle(connection.provider),
       input.connectionId,
     );
     externalId = await session.insertCalendar({
@@ -127,7 +136,7 @@ export async function createSyncedCalendar(
       timeZone: input.timeZone,
     });
   } catch (error) {
-    return failed(error);
+    return failed(error, providerOrGoogle(connection.provider));
   }
 
   const { data, error } = await call(deps, "sync_attach_created", {

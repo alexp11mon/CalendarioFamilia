@@ -1,5 +1,7 @@
 import { ConfirmDialog } from "@/components/calendar/confirm-dialog";
 import type { ConfirmState, FormAction } from "@/lib/forms/form-state";
+import { providerName } from "@/lib/sync/provider-labels";
+import type { ProviderName } from "@/lib/sync/providers/types";
 
 export interface DisconnectCalendar {
   name: string;
@@ -19,8 +21,10 @@ export function DisconnectDialog({
   email,
   calendars,
   action,
+  provider = "google",
 }: {
   email: string;
+  provider?: ProviderName;
   calendars: DisconnectCalendar[];
   action: FormAction<ConfirmState>;
 }) {
@@ -34,8 +38,8 @@ export function DisconnectDialog({
   return (
     <ConfirmDialog
       triggerLabel="Desconectar"
-      title="¿Desconectar la cuenta de Google?"
-      description={`${description} CaFam dejará de tener permiso en tu cuenta de Google.`}
+      title={`¿Desconectar la cuenta de ${providerName(provider)}?`}
+      description={`${description} CaFam dejará de tener permiso en tu cuenta de ${providerName(provider)}.`}
       confirmLabel="Sí, desconectar"
       action={action}
     >

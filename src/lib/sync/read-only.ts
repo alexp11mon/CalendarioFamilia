@@ -1,5 +1,6 @@
 import type { Database } from "@/types/database";
-import type { GoogleAccess } from "./providers/google";
+import { providerName } from "./provider-labels";
+import type { ProviderAccess, ProviderName } from "./providers/types";
 
 // What the screens offer in synced calendars; the database decides anyway
 // (spec 007 T2, spec 009 T3). Since spec 009 they are writable when the
@@ -13,7 +14,10 @@ export interface SyncedInfo {
   connectionId: string;
   /** The database's can_write_synced (plan D11). */
   canWrite: boolean;
-  googleAccess: GoogleAccess | null;
+  /** The access in the provider (Google or iCloud), from google_access (spec 018 D8). */
+  googleAccess: ProviderAccess | null;
+  /** Google or iCloud: names the provider in the texts (spec 018). */
+  provider: ProviderName;
 }
 
 interface CalendarAccess {
@@ -47,10 +51,37 @@ export function moveTargets<T extends CalendarAccess>(
   );
 }
 
-/** Why a synced calendar is read-only: Google allows only reading, or the account must reconnect (RF-3, RF-8). */
+/**
+ * Why a synced calendar is read-only: its provider allows only reading, or the
+ * account must reconnect (RF-3, RF-8; spec 018 RF-20).
+ */
 export function readOnlyReason(
   synced: SyncedInfo | null,
-): "google" | "reconnect" | null {
+): "provider" | "reconnect" | null {
   if (!synced || synced.canWrite) return null;
-  return synced.googleAccess === "reader" ? "google" : "reconnect";
+  return synced.googleAccess === "reader" ? "provider" : "reconnect";
+}
+
+export type ReadOnlyReason = NonNullable<ReturnType<typeof readOnlyReason>>;
+
+/** Why the detail of an event has no buttons (spec 009 RF-8, spec 018 RF-20). */
+export function readOnlyEventText(
+  reason: ReadOnlyReason,
+  provider: ProviderName,
+): string {
+  const name = providerName(provider);
+  return reason === "provider"
+    ? `La cuenta de ${name} solo puede ver este calendario, así que este evento solo se puede cambiar en ${name}.`
+    : `Este evento viene de ${name}. Para cambiarlo desde CaFam, el propietario tiene que volver a conectar la cuenta.`;
+}
+
+/** Why an event cannot be pasted in a synced calendar (spec 017). */
+export function readOnlyPasteText(
+  reason: ReadOnlyReason,
+  provider: ProviderName,
+): string {
+  const name = providerName(provider);
+  return reason === "provider"
+    ? `La cuenta de ${name} solo puede ver este calendario, así que no se puede pegar en él.`
+    : `Para pegar en este calendario, el propietario tiene que volver a conectar la cuenta de ${name}.`;
 }

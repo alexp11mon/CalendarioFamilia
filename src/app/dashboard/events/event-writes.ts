@@ -25,7 +25,8 @@ import {
   type SeriesScope,
 } from "@/lib/recurrence/series-write";
 import { writeEngineDeps } from "@/lib/sync/engine";
-import { WRITE_ERRORS } from "@/lib/sync/write-errors";
+import { goneDone, type GoneDone } from "@/lib/sync/provider-labels";
+import { writeErrorText } from "@/lib/sync/write-errors";
 import {
   writeEvent,
   type WriteRequest,
@@ -208,7 +209,7 @@ export async function updateSingle(
   event: EventRecord,
   data: EventData,
   values: EventFormValues,
-): Promise<Saved | "gone"> {
+): Promise<Saved | GoneDone> {
   const synced = await syncedWrite(supabase, {
     op: "update",
     eventId: event.id,
@@ -224,10 +225,13 @@ export async function updateSingle(
     row: toRow(data),
   });
   if (synced.status === "failed") {
-    return { formError: WRITE_ERRORS[synced.failure], values };
+    return {
+      formError: writeErrorText(synced.failure, synced.provider),
+      values,
+    };
   }
   if (synced.status === "dbError") return failure(synced.error, values);
-  if (synced.status === "gone") return "gone";
+  if (synced.status === "gone") return goneDone(synced.provider);
   if (synced.status === "normal") {
     // Changing calendar is checked by RLS on both sides (RF-27).
     const { data: rows, error } = await supabase
@@ -297,7 +301,7 @@ export async function deleteSingle(
       calendarId: current.calendar_id,
     });
     if (synced.status === "failed") {
-      return { formError: WRITE_ERRORS[synced.failure] };
+      return { formError: writeErrorText(synced.failure, synced.provider) };
     }
     if (synced.status === "dbError") {
       return { formError: getCalendarErrorMessage(synced.error) };
@@ -305,8 +309,8 @@ export async function deleteSingle(
     if (synced.status === "gone") {
       refresh();
       return mode === "modal"
-        ? { done: "gone" }
-        : { formError: WRITE_ERRORS.gone };
+        ? { done: goneDone(synced.provider) }
+        : { formError: writeErrorText("gone", synced.provider) };
     }
 
     if (synced.status === "normal") {

@@ -24,7 +24,7 @@ async function Connections({
   );
 }
 
-/** Connected Google accounts (spec 007; RF-1, RF-3 to RF-5, RF-8, RF-47). */
+/** Connected Google and iCloud accounts (spec 007; RF-1, RF-3 to RF-5, RF-8, RF-47). */
 export default function ConnectionsPage({
   searchParams,
 }: {
@@ -35,8 +35,8 @@ export default function ConnectionsPage({
       <header className="flex flex-col gap-2">
         <h1 className="text-2xl font-bold text-ink">Cuentas conectadas</h1>
         <p className="text-muted">
-          Trae tus calendarios de Google y mantenlos al día. CaFam solo los lee:
-          nunca cambia nada en tu cuenta de Google.
+          Trae tus calendarios de Google o iCloud y mantenlos al día. Lo que
+          crees, cambies o borres en ellos en CaFam también cambia en tu cuenta.
         </p>
       </header>
       <Suspense fallback={<p className="text-muted">Cargando cuentas…</p>}>

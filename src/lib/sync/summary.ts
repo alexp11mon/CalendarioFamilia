@@ -1,4 +1,5 @@
-import type { FailureKind } from "./providers/google";
+import { providerName } from "./provider-labels";
+import type { FailureKind, ProviderName } from "./providers/types";
 
 // Spanish texts of an update (RF-18, RF-19, RF-23) and of its failures (RF-13,
 // RF-31, RF-33).
@@ -40,3 +41,18 @@ export const SYNC_ERRORS: Record<Exclude<FailureKind, "rejected">, string> = {
     "Google ha retirado el permiso de CaFam. Vuelve a conectar la cuenta para seguir actualizando.",
   missing: "Este calendario ya no existe en la cuenta de Google.",
 };
+
+/** The same texts naming the account's provider (spec 018 RF-19, RF-61, RF-62). */
+export function syncErrorText(
+  kind: Exclude<FailureKind, "rejected">,
+  provider: ProviderName,
+): string {
+  if (provider === "google") return SYNC_ERRORS[kind];
+  if (kind === "revoked") {
+    return "iCloud ya no acepta la contraseña de esta cuenta. Pasa al cambiar la contraseña del Apple ID o al revocarla: vuelve a conectarla con una contraseña específica de app nueva.";
+  }
+  if (kind === "missing") {
+    return `Este calendario ya no existe en la cuenta de ${providerName(provider)}.`;
+  }
+  return SYNC_ERRORS.transient;
+}

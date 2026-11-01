@@ -1,5 +1,7 @@
 import { toGooglePatch, type WritableEvent } from "./google-payload";
+import { providerOrGoogle } from "./provider-labels";
 import { openSession } from "./providers";
+import type { ProviderName } from "./providers/types";
 import type { SyncDeps } from "./run-sync";
 import { writeFailureOf, type WriteFailure } from "./write-errors";
 
@@ -32,9 +34,13 @@ export type WriteResult =
   /** Neither side is synced: the caller writes as always. */
   | { status: "normal" }
   | { status: "done"; eventId: string }
-  /** Deleted in Google meanwhile: removed from CaFam, nothing saved (RF-25). */
-  | { status: "gone" }
-  | { status: "failed"; failure: Exclude<WriteFailure, "gone"> }
+  /** Deleted in the provider meanwhile: removed from CaFam, nothing saved (RF-25). */
+  | { status: "gone"; provider: ProviderName }
+  | {
+      status: "failed";
+      failure: Exclude<WriteFailure, "gone">;
+      provider: ProviderName;
+    }
   /** Refused by the database (role, mixed calendars): the caller explains it. */
   | { status: "dbError"; error: unknown };
 
@@ -85,6 +91,7 @@ export async function writeEvent(
   if (error) return { status: "dbError", error };
   const context = data as Context;
   if (!context.synced) return { status: "normal" };
+  const provider = providerOrGoogle(context.provider);
 
   const commit = async (
     op: string,
@@ -100,7 +107,7 @@ export async function writeEvent(
     });
     if (saved.error) return { status: "dbError", error: saved.error };
     return op === "gone"
-      ? { status: "gone" }
+      ? { status: "gone", provider }
       : { status: "done", eventId: saved.data as string };
   };
 
@@ -123,7 +130,7 @@ export async function writeEvent(
   try {
     const session = await openSession(
       { ...deps, fetchFn },
-      context.provider ?? "google",
+      provider,
       context.connection_id,
     );
     const source = context.calendar_external_id;
@@ -165,7 +172,7 @@ export async function writeEvent(
     if (failure === "gone") {
       // A new event cannot be "gone": its calendar is missing, Google refused.
       if (request.op === "create")
-        return { status: "failed", failure: "rejected" };
+        return { status: "failed", failure: "rejected", provider };
       return commit("gone", request.eventId, null);
     }
     if (failure === "revoked") {
@@ -174,7 +181,7 @@ export async function writeEvent(
         p_kind: "revoked",
       }).catch(() => undefined);
     }
-    return { status: "failed", failure };
+    return { status: "failed", failure, provider };
   } finally {
     done();
   }

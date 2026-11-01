@@ -189,7 +189,11 @@ describe("uploadCalendar", () => {
       json({ error: { code: 400, errors: [{ reason: "invalid" }] } }, 400);
     const result = await upload([event("in-1", "2026-11-02")]);
 
-    expect(result).toEqual({ status: "failed", failure: "rejected" });
+    expect(result).toEqual({
+      status: "failed",
+      failure: "rejected",
+      provider: "google",
+    });
     expect(methods()).toContain(`DELETE ${API}/calendars/up%40group`);
     expect(calls.some((c) => c.fn === "sync_attach_uploaded")).toBe(false);
   });
@@ -208,7 +212,11 @@ describe("uploadCalendar", () => {
       Array.from({ length: 10 }, (_, i) => event(`e${i}`, "2026-11-02")),
       { elapsedMs: () => (elapsed += 100_000) },
     );
-    expect(result).toEqual({ status: "failed", failure: "transient" });
+    expect(result).toEqual({
+      status: "failed",
+      failure: "transient",
+      provider: "google",
+    });
     expect(methods()).toContain(`DELETE ${API}/calendars/up%40group`);
   });
 });

@@ -1,5 +1,6 @@
 import type { SyncedCalendarView } from "@/lib/sync/queries";
-import { summaryText, SYNC_ERRORS } from "@/lib/sync/summary";
+import { summaryText, syncErrorText } from "@/lib/sync/summary";
+import type { ProviderName } from "@/lib/sync/providers/types";
 
 export function formatWhen(iso: string, timeZone: string) {
   return new Intl.DateTimeFormat("es-ES", {
@@ -15,9 +16,11 @@ export function formatWhen(iso: string, timeZone: string) {
 export function SyncStatus({
   calendars,
   timeZone,
+  provider = "google",
 }: {
   calendars: SyncedCalendarView[];
   timeZone: string;
+  provider?: ProviderName;
 }) {
   return (
     <ul className="flex flex-col gap-3">
@@ -28,7 +31,9 @@ export function SyncStatus({
         >
           <span className="font-semibold">{calendar.name}</span>
           {calendar.state === "missing" ? (
-            <span className="text-danger">{SYNC_ERRORS.missing}</span>
+            <span className="text-danger">
+              {syncErrorText("missing", provider)}
+            </span>
           ) : (
             <>
               <span className="tabular-nums">
@@ -38,9 +43,10 @@ export function SyncStatus({
               </span>
               {calendar.lastError && calendar.lastError !== "missing" ? (
                 <span className="text-danger">
-                  {SYNC_ERRORS[
-                    calendar.lastError as keyof typeof SYNC_ERRORS
-                  ] ?? SYNC_ERRORS.transient}
+                  {syncErrorText(
+                    calendar.lastError === "revoked" ? "revoked" : "transient",
+                    provider,
+                  )}
                 </span>
               ) : calendar.lastSummary ? (
                 <span className="text-muted">

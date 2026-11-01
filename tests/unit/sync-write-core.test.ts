@@ -155,6 +155,7 @@ describe("write errors (RF-22 to RF-26)", () => {
 });
 
 const synced = (extra: Partial<SyncedInfo> = {}): SyncedInfo => ({
+  provider: "google",
   lastSyncedAt: null,
   accountEmail: null,
   connectionId: "conn-1",
@@ -209,7 +210,8 @@ describe("readOnlyReason (RF-8)", () => {
     expect(readOnlyReason(synced())).toBeNull();
     expect(
       readOnlyReason(synced({ canWrite: false, googleAccess: "reader" })),
-    ).toBe("google");
+      // Spec 018 T4: "google" became "provider".
+    ).toBe("provider");
     expect(readOnlyReason(synced({ canWrite: false }))).toBe("reconnect");
   });
 });

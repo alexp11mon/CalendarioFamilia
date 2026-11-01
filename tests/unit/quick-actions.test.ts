@@ -211,7 +211,11 @@ describe("synced calendars (RF-3, RF-4, RF-38)", () => {
   });
 
   it("saves nothing when Google refuses", async () => {
-    h.writeEvent.mockResolvedValue({ status: "failed", failure: "rejected" });
+    h.writeEvent.mockResolvedValue({
+      status: "failed",
+      failure: "rejected",
+      provider: "google",
+    });
     expect(await quickChange(EVENT_ID, LATER)).toEqual({
       ok: false,
       error: "Google no ha permitido el cambio, así que no se ha guardado.",
@@ -219,9 +223,9 @@ describe("synced calendars (RF-3, RF-4, RF-38)", () => {
   });
 
   it("a deleted event in Google is gone", async () => {
-    h.writeEvent.mockResolvedValue({ status: "gone" });
+    h.writeEvent.mockResolvedValue({ status: "gone", provider: "google" });
     const result = await quickChange(EVENT_ID, LATER);
-    expect(result).toMatchObject({ ok: false, gone: true });
+    expect(result).toMatchObject({ ok: false, gone: "gone" });
   });
 });
 
@@ -370,7 +374,11 @@ describe("deleteForUndo (RF-25, RF-31, RF-40, RF-55)", () => {
 
   it("no undo when the delete fails", async () => {
     rpcs({ snapshot_event: { data: TRASH_ID, error: null } });
-    h.writeEvent.mockResolvedValue({ status: "failed", failure: "transient" });
+    h.writeEvent.mockResolvedValue({
+      status: "failed",
+      failure: "transient",
+      provider: "google",
+    });
     const result = await deleteForUndo(EVENT_ID);
     expect(result).toMatchObject({ ok: false });
     expect(result).not.toHaveProperty("undo");
@@ -378,10 +386,10 @@ describe("deleteForUndo (RF-25, RF-31, RF-40, RF-55)", () => {
 
   it("a deleted event in Google is gone", async () => {
     rpcs({ snapshot_event: { data: TRASH_ID, error: null } });
-    h.writeEvent.mockResolvedValue({ status: "gone" });
+    h.writeEvent.mockResolvedValue({ status: "gone", provider: "google" });
     expect(await deleteForUndo(EVENT_ID)).toMatchObject({
       ok: false,
-      gone: true,
+      gone: "gone",
     });
   });
 
@@ -531,7 +539,11 @@ describe("undoAction (RF-27 to RF-29)", () => {
         error: null,
       },
     });
-    h.writeEvent.mockResolvedValue({ status: "failed", failure: "rejected" });
+    h.writeEvent.mockResolvedValue({
+      status: "failed",
+      failure: "rejected",
+      provider: "google",
+    });
     expect(await undoAction({ kind: "restore", trashId: TRASH_ID })).toEqual({
       ok: false,
       error: "Google no ha permitido el cambio, así que no se ha guardado.",

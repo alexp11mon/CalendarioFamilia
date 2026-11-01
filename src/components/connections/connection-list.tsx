@@ -2,13 +2,14 @@ import Link from "next/link";
 import { FormAlert } from "@/components/ui/form-alert";
 import { LinkButton } from "@/components/ui/link-button";
 import { CONNECT_ERRORS, isConnectError } from "@/lib/sync/error-messages";
+import { providerName } from "@/lib/sync/provider-labels";
 import type { Connection } from "@/lib/sync/queries";
 
 const LINK =
   "inline-flex min-h-11 items-center text-sm font-semibold text-ink underline decoration-control underline-offset-4 hover:decoration-ink";
 
 /**
- * Connected accounts with the way back from Google (RF-1, RF-3 to RF-5, RF-8,
+ * Connected accounts with the way back from the provider (RF-1, RF-3 to RF-5, RF-8,
  * RF-47). `error` is the raw ?error= code; unknown codes are ignored.
  */
 export function ConnectionList({
@@ -41,7 +42,9 @@ export function ConnectionList({
               key={connection.id}
               className="flex min-w-0 flex-col gap-1 rounded-3xl bg-paper p-4"
             >
-              <span className="text-sm font-semibold text-muted">Google</span>
+              <span className="text-sm font-semibold text-muted">
+                {providerName(connection.provider)}
+              </span>
               <span className="truncate font-semibold text-ink">
                 {connection.email}
               </span>

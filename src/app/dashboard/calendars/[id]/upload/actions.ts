@@ -9,7 +9,7 @@ import { getProfileTimeZone, requireActionUser } from "@/lib/calendar/queries";
 import { readString, type FormState } from "@/lib/forms/form-state";
 import { writeEngineDeps } from "@/lib/sync/engine";
 import { uploadCalendar } from "@/lib/sync/upload-calendar";
-import { WRITE_ERRORS } from "@/lib/sync/write-errors";
+import { writeErrorText } from "@/lib/sync/write-errors";
 import { calendarEvents, uploadableCalendar } from "./load-upload";
 
 export type UploadState = FormState<"connectionId">;
@@ -44,7 +44,10 @@ export async function uploadToGoogle(
       events: await calendarEvents(supabase, calendarId),
     });
     if (result.status === "failed") {
-      return { formError: WRITE_ERRORS[result.failure], values };
+      return {
+        formError: writeErrorText(result.failure, result.provider),
+        values,
+      };
     }
     if (result.status === "limit") return { formError: LIMIT, values };
     if (result.status === "forbidden" || result.status === "notFound") {

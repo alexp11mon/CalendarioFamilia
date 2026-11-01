@@ -112,7 +112,11 @@ describe("create (RF-10)", () => {
   it("does not save in CaFam when Google fails (RF-21)", async () => {
     google = () => json({ error: { code: 500 } }, 500);
     const result = await writeEvent({ op: "create", row }, deps());
-    expect(result).toEqual({ status: "failed", failure: "transient" });
+    expect(result).toEqual({
+      status: "failed",
+      failure: "transient",
+      provider: "google",
+    });
     expect(named("sync_commit_event")).toEqual([]);
   });
 });
@@ -189,7 +193,7 @@ describe("update (RF-11, RF-14, RF-19)", () => {
       { op: "update", eventId: "ev-1", calendarId: "cal-a", before, row },
       deps(),
     );
-    expect(result).toEqual({ status: "gone" });
+    expect(result).toEqual({ status: "gone", provider: "google" });
     expect(named("sync_commit_event")[0].args).toMatchObject({
       p_op: "gone",
       p_event_id: "ev-1",
@@ -202,7 +206,11 @@ describe("update (RF-11, RF-14, RF-19)", () => {
       { op: "update", eventId: "ev-1", calendarId: "cal-a", before, row },
       deps(),
     );
-    expect(result).toEqual({ status: "failed", failure: "revoked" });
+    expect(result).toEqual({
+      status: "failed",
+      failure: "revoked",
+      provider: "google",
+    });
     expect(named("sync_fail")[0].args).toMatchObject({
       p_calendar_id: "cal-a",
       p_kind: "revoked",
@@ -217,7 +225,11 @@ describe("update (RF-11, RF-14, RF-19)", () => {
       { op: "update", eventId: "ev-1", calendarId: "cal-a", before, row },
       deps(),
     );
-    expect(result).toEqual({ status: "failed", failure: "rejected" });
+    expect(result).toEqual({
+      status: "failed",
+      failure: "rejected",
+      provider: "google",
+    });
     expect(named("sync_commit_event")).toEqual([]);
   });
 
@@ -262,7 +274,11 @@ describe("limits and errors", () => {
       );
     const pending = writeEvent({ op: "create", row }, deps());
     await vi.advanceTimersByTimeAsync(9_000);
-    expect(await pending).toEqual({ status: "failed", failure: "transient" });
+    expect(await pending).toEqual({
+      status: "failed",
+      failure: "transient",
+      provider: "google",
+    });
     vi.useRealTimers();
   });
 

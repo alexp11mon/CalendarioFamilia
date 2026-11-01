@@ -19,7 +19,7 @@ import {
   type ConnectionSync,
 } from "@/lib/sync/engine";
 import { createSyncedCalendar } from "@/lib/sync/write-calendar";
-import { WRITE_ERRORS } from "@/lib/sync/write-errors";
+import { writeErrorText } from "@/lib/sync/write-errors";
 import { nearestColor } from "@/lib/sync/nearest-color";
 import { connectionIdSchema, selectionSchema } from "@/lib/sync/schemas";
 import { summaryText, SYNC_ERRORS } from "@/lib/sync/summary";
@@ -251,7 +251,10 @@ export async function createGoogleCalendar(
     timeZone: await getProfileTimeZone(supabase, userId),
   });
   if (result.status === "failed") {
-    return { formError: WRITE_ERRORS[result.failure], values };
+    return {
+      formError: writeErrorText(result.failure, result.provider),
+      values,
+    };
   }
   if (result.status === "limit") return { formError: LIMIT, values };
   if (result.status === "notFound") return { formError: GONE, values };

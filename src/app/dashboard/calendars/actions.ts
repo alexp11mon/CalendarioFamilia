@@ -22,7 +22,7 @@ import {
 } from "@/lib/forms/form-state";
 import { writeEngineDeps } from "@/lib/sync/engine";
 import { renameSyncedCalendar } from "@/lib/sync/write-calendar";
-import { WRITE_ERRORS } from "@/lib/sync/write-errors";
+import { writeErrorText } from "@/lib/sync/write-errors";
 
 type CalendarFormState = FormState<CalendarField>;
 
@@ -100,7 +100,10 @@ export async function updateCalendar(
       color: parsed.data.color,
     });
     if (synced.status === "failed") {
-      return { formError: WRITE_ERRORS[synced.failure], values };
+      return {
+        formError: writeErrorText(synced.failure, synced.provider),
+        values,
+      };
     }
     if (synced.status === "forbidden") {
       return { formError: CALENDAR_MESSAGES.forbidden, values };

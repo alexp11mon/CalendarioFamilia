@@ -88,6 +88,7 @@ export async function loadEvent(id: string): Promise<EventData | null> {
       categoryName: category?.name ?? null,
       author: authorLabel(event.createdBy, members),
       readOnly: readOnlyReason(calendar.synced),
+      provider: calendar.synced?.provider,
       repeat: event.series
         ? {
             summary: event.series.summary,

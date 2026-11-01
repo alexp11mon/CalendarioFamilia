@@ -4,8 +4,8 @@ import { openSession } from "./providers";
 import { ProviderError, type ProviderSession } from "./providers/types";
 import type { SyncDeps } from "./run-sync";
 import { planUpload, withOccurrences, type UploadRow } from "./upload-plan";
-import type { CalendarWriteResult } from "./write-calendar";
-import { writeFailureOf } from "./write-errors";
+import { providerOrGoogle } from "./provider-labels";
+import { failed, type CalendarWriteResult } from "./write-calendar";
 
 // Copies a normal CaFam calendar to the provider and turns it into a synced one
 // (plan D14; RF-34 to RF-37, RF-42). CaFam changes only at the end, in one
@@ -75,6 +75,7 @@ export async function uploadCalendar(
     .eq("connection_id", input.connectionId);
   if ((count ?? 0) >= MAX_CALENDARS_PER_ACCOUNT) return { status: "limit" };
 
+  const provider = providerOrGoogle(connection.provider);
   const started = Date.now();
   const elapsed = deps.elapsedMs ?? (() => Date.now() - started);
   const now = deps.now?.() ?? new Date();
@@ -82,21 +83,13 @@ export async function uploadCalendar(
   let session: ProviderSession;
   let externalId: string;
   try {
-    session = await openSession(
-      deps,
-      connection.provider ?? "google",
-      input.connectionId,
-    );
+    session = await openSession(deps, provider, input.connectionId);
     externalId = await session.insertCalendar({
       name: input.name,
       timeZone: input.timeZone,
     });
   } catch (error) {
-    const failure = writeFailureOf(error);
-    return {
-      status: "failed",
-      failure: failure === "gone" ? "rejected" : failure,
-    };
+    return failed(error, provider);
   }
   const undo = () => session.deleteCalendar(externalId).catch(() => undefined);
 
@@ -131,11 +124,7 @@ export async function uploadCalendar(
   } catch (error) {
     queue.length = 0;
     await undo();
-    const failure = writeFailureOf(error);
-    return {
-      status: "failed",
-      failure: failure === "gone" ? "rejected" : failure,
-    };
+    return failed(error, provider);
   }
 
   const { error } = await call(deps, "sync_attach_uploaded", {

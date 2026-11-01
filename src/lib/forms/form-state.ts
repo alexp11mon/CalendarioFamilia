@@ -26,7 +26,8 @@ export interface Loss {
 }
 
 /** "gone": deleted in Google while it was being changed (spec 009 RF-25). */
-export type Done = "created" | "updated" | "deleted" | "gone";
+// "goneIcloud": the same, in iCloud (spec 018 RF-48).
+export type Done = "created" | "updated" | "deleted" | "gone" | "goneIcloud";
 
 /** Result of a confirm-and-act Server Action (delete, merge): only an error comes back. */
 export interface ConfirmState {

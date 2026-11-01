@@ -12,6 +12,7 @@ const SYNCED = {
   connectionId: "conn-1",
   canWrite: false,
   googleAccess: null,
+  provider: "google" as const,
 };
 
 describe("canWriteEvents (RF-20, RF-21)", () => {
@@ -35,7 +36,8 @@ describe("canMerge (RF-45)", () => {
 describe("EventDetail of a read-only synced event (spec 009 RF-8)", () => {
   it.each([
     ["reconnect", /volver a conectar/i],
-    ["google", /solo puede ver este calendario/i],
+    // Spec 018 T4: "google" became "provider", named in the text.
+    ["provider", /solo puede ver este calendario/i],
   ] as const)("has no buttons and says why (%s)", (readOnly, text) => {
     render(
       <EventDetail

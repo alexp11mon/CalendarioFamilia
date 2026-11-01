@@ -8,6 +8,7 @@ import { DEFAULT_ACCENT, isAccent, type AccentId } from "@/lib/theme/accents";
 import { parseTheme, type ThemeId } from "@/lib/theme/theme";
 import type { CalendarPreference, Person, PersonPreference } from "./grouping";
 import type { CalendarGroup } from "./organize-groups";
+import { providerOrGoogle } from "@/lib/sync/provider-labels";
 import { accessOf } from "@/lib/sync/providers/google";
 import type { SyncedInfo } from "@/lib/sync/read-only";
 import type { Database } from "@/types/database";
@@ -52,7 +53,7 @@ export async function requireUser() {
 }
 
 const CALENDAR_SELECT =
-  "role, calendars(id, name, description, color, owner_id, created_at, synced_calendars(last_synced_at, connection_id, google_access, can_write, calendar_connections(account_email)))";
+  "role, calendars(id, name, description, color, owner_id, created_at, synced_calendars(last_synced_at, connection_id, provider, google_access, can_write, calendar_connections(account_email)))";
 
 type CalendarRow = {
   role: CalendarRole;
@@ -66,6 +67,7 @@ type CalendarRow = {
     synced_calendars: {
       last_synced_at: string | null;
       connection_id: string;
+      provider: string;
       google_access: string | null;
       can_write: boolean | null;
       calendar_connections: { account_email: string } | null;
@@ -95,6 +97,7 @@ function toRecord({ role, calendars }: CalendarRow): CalendarRecord[] {
                 googleAccess: accessOf(
                   calendars.synced_calendars.google_access,
                 ),
+                provider: providerOrGoogle(calendars.synced_calendars.provider),
               }
             : null,
         },

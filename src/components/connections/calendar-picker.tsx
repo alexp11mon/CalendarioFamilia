@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button";
 import { FormAlert } from "@/components/ui/form-alert";
 import type { FormAction } from "@/lib/forms/form-state";
 import { MAX_CALENDARS_PER_ACCOUNT } from "@/lib/sync/limits";
-import type { GoogleAccess } from "@/lib/sync/providers/google";
+import { providerName } from "@/lib/sync/provider-labels";
+import type { ProviderAccess, ProviderName } from "@/lib/sync/providers/types";
 
 export interface PickerCalendar {
   id: string;
@@ -13,7 +14,7 @@ export interface PickerCalendar {
   color: string | null;
   synced: boolean;
   /** Festivos, birthdays or shared without changes stay read-only (spec 009 RF-8). */
-  access?: GoogleAccess | null;
+  access?: ProviderAccess | null;
 }
 
 interface PickerState {
@@ -30,8 +31,10 @@ export function CalendarPicker({
   connectionId,
   calendars,
   action,
+  provider = "google",
 }: {
   connectionId: string;
+  provider?: ProviderName;
   calendars: PickerCalendar[];
   action: FormAction<PickerState>;
 }) {
@@ -89,7 +92,7 @@ export function CalendarPicker({
               <span className="min-w-0 truncate">{calendar.name}</span>
               {calendar.access === "reader" ? (
                 <span className="ml-auto shrink-0 text-sm text-muted">
-                  Solo lectura en Google
+                  Solo lectura en {providerName(provider)}
                 </span>
               ) : null}
             </label>

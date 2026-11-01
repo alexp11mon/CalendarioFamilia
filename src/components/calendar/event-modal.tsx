@@ -19,7 +19,7 @@ import { sheetAfterDrag, type SheetState } from "@/lib/calendar/sheet";
 import type { UndoToken } from "@/lib/calendar/undo";
 import { useIsPhone } from "@/lib/hooks/use-is-phone";
 import type { Done } from "@/lib/forms/form-state";
-import { WRITE_ERRORS } from "@/lib/sync/write-errors";
+import { goneText } from "@/lib/sync/write-errors";
 import { useUndoToast } from "./use-undo-toast";
 
 const ICON_BUTTON =
@@ -29,7 +29,8 @@ export const DONE_MESSAGES: Record<Done, string> = {
   created: "Evento creado",
   updated: "Cambios guardados",
   deleted: "Evento borrado",
-  gone: WRITE_ERRORS.gone,
+  gone: goneText("gone"),
+  goneIcloud: goneText("goneIcloud"),
 };
 
 interface EventModalApi {

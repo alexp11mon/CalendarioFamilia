@@ -4,6 +4,7 @@ import { formatWhen } from "@/components/connections/sync-status";
 import { AssignGroupSelect } from "@/components/groups/assign-group-select";
 import { LinkButton } from "@/components/ui/link-button";
 import type { ConfirmState } from "@/lib/forms/form-state";
+import { providerName } from "@/lib/sync/provider-labels";
 import type { SyncedInfo } from "@/lib/sync/read-only";
 import type { Database } from "@/types/database";
 
@@ -94,8 +95,8 @@ export function CalendarList({
             // Every member sees the last update; only the owner the account (spec 007 RF-26).
             <p className="text-sm text-muted tabular-nums">
               {calendar.synced.lastSyncedAt
-                ? `Traído de Google, actualizado el ${formatWhen(calendar.synced.lastSyncedAt, timeZone)}.`
-                : "Traído de Google, todavía no se ha actualizado."}
+                ? `Traído de ${providerName(calendar.synced.provider)}, actualizado el ${formatWhen(calendar.synced.lastSyncedAt, timeZone)}.`
+                : `Traído de ${providerName(calendar.synced.provider)}, todavía no se ha actualizado.`}
               {calendar.synced.accountEmail
                 ? ` Cuenta: ${calendar.synced.accountEmail}.`
                 : null}

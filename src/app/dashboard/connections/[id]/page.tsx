@@ -23,7 +23,9 @@ import {
 } from "@/lib/sync/queries";
 import { connectionIdSchema } from "@/lib/sync/schemas";
 import { missingFromQuery } from "@/lib/sync/scopes";
-import { SYNC_ERRORS } from "@/lib/sync/summary";
+import { providerName } from "@/lib/sync/provider-labels";
+import type { ProviderName } from "@/lib/sync/providers/types";
+import { syncErrorText } from "@/lib/sync/summary";
 import {
   createGoogleCalendar,
   disconnectAccount,
@@ -31,15 +33,15 @@ import {
   syncNow,
 } from "../actions";
 
-export const metadata: Metadata = { title: "Cuenta de Google" };
+export const metadata: Metadata = { title: "Cuenta conectada" };
 
 // Reading Google's list and the first load of new calendars may take a while.
 export const maxDuration = 60;
 
-/** Google's current list, or the reason it could not be read (RF-12, RF-31). */
-async function readGoogleList(
+/** The provider's current list, or the reason it could not be read (RF-12, RF-31). */
+async function readProviderList(
   connectionId: string,
-  provider: string,
+  provider: ProviderName,
 ): Promise<{ list: ProviderCalendar[] } | { error: string }> {
   try {
     return { list: await providerCalendars(connectionId, provider) };
@@ -47,8 +49,8 @@ async function readGoogleList(
     return {
       error:
         error instanceof ProviderError && error.kind === "revoked"
-          ? SYNC_ERRORS.revoked
-          : "No se ha podido leer la lista de calendarios de Google. Inténtalo más tarde.",
+          ? syncErrorText("revoked", provider)
+          : `No se ha podido leer la lista de calendarios de ${providerName(provider)}. Inténtalo más tarde.`,
     };
   }
 }
@@ -71,8 +73,10 @@ async function ConnectionDetail({
     getSyncedCalendars(supabase, id),
     getProfileTimeZone(supabase, userId),
     connection.status === "active"
-      ? readGoogleList(id, connection.provider)
-      : Promise.resolve({ error: SYNC_ERRORS.revoked }),
+      ? readProviderList(id, connection.provider)
+      : Promise.resolve({
+          error: syncErrorText("revoked", connection.provider),
+        }),
   ]);
   const syncedIds = new Set(synced.map((c) => c.externalId));
   const sharedWith = await getSharedCounts(
@@ -83,7 +87,9 @@ async function ConnectionDetail({
   return (
     <>
       <section className="flex flex-col gap-3 rounded-3xl bg-paper p-4 sm:p-6">
-        <p className="text-sm font-semibold text-muted">Google</p>
+        <p className="text-sm font-semibold text-muted">
+          {providerName(connection.provider)}
+        </p>
         <p className="truncate text-lg font-semibold text-ink">
           {connection.email}
         </p>
@@ -91,9 +97,11 @@ async function ConnectionDetail({
           <SyncNowButton action={syncNow.bind(null, id)} />
         ) : (
           <div className="flex flex-col gap-3">
-            <FormAlert message={SYNC_ERRORS.revoked} />
+            <FormAlert
+              message={syncErrorText("revoked", connection.provider)}
+            />
             <LinkButton
-              href="/dashboard/connections/new?provider=google"
+              href={`/dashboard/connections/new?provider=${connection.provider}`}
               className="self-start"
             >
               Volver a conectar
@@ -119,7 +127,11 @@ async function ConnectionDetail({
           <h2 id="synced-heading" className="text-lg font-semibold text-ink">
             Calendarios traídos
           </h2>
-          <SyncStatus calendars={synced} timeZone={timeZone} />
+          <SyncStatus
+            calendars={synced}
+            timeZone={timeZone}
+            provider={connection.provider}
+          />
         </section>
       ) : null}
 
@@ -132,6 +144,7 @@ async function ConnectionDetail({
         ) : (
           <CalendarPicker
             connectionId={id}
+            provider={connection.provider}
             action={saveSelection}
             calendars={google.list.map((calendar) => ({
               ...calendar,
@@ -147,12 +160,16 @@ async function ConnectionDetail({
           className="flex flex-col gap-3"
         >
           <h2 id="create-heading" className="text-lg font-semibold text-ink">
-            Crear un calendario en Google
+            Crear un calendario en {providerName(connection.provider)}
           </h2>
           <p className="text-ink">
-            Se crea en esta cuenta de Google y se trae a CaFam.
+            Se crea en esta cuenta de {providerName(connection.provider)} y se
+            trae a CaFam.
           </p>
-          <CreateCalendarForm action={createGoogleCalendar.bind(null, id)} />
+          <CreateCalendarForm
+            provider={connection.provider}
+            action={createGoogleCalendar.bind(null, id)}
+          />
         </section>
       ) : null}
 
@@ -169,6 +186,7 @@ async function ConnectionDetail({
         <div>
           <DisconnectDialog
             email={connection.email}
+            provider={connection.provider}
             action={disconnectAccount.bind(null, id)}
             calendars={synced.map((c) => ({
               name: c.name,
@@ -181,7 +199,7 @@ async function ConnectionDetail({
   );
 }
 
-/** One Google account: its calendars, their state and the update (RF-9 to RF-14, RF-23, RF-26). */
+/** One connected account: its calendars, their state and the update (RF-9 to RF-14, RF-23, RF-26). */
 export default function ConnectionPage({
   params,
   searchParams,
@@ -191,7 +209,7 @@ export default function ConnectionPage({
 }) {
   return (
     <PageShell
-      title="Cuenta de Google"
+      title="Cuenta conectada"
       backHref="/dashboard/connections"
       backLabel="Volver a Cuentas conectadas"
     >

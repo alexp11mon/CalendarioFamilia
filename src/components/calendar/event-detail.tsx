@@ -1,4 +1,6 @@
 import type { ReactNode } from "react";
+import type { ProviderName } from "@/lib/sync/providers/types";
+import { readOnlyEventText, type ReadOnlyReason } from "@/lib/sync/read-only";
 import { formatEventWhen } from "@/lib/calendar/format";
 import type { ConfirmState, Done, FormAction } from "@/lib/forms/form-state";
 import { SeriesDelete } from "@/components/recurrence/series-delete";
@@ -21,17 +23,12 @@ export interface EventDetailData {
   /** Who created it, or the text for a gone author (spec 006, RF-34 to RF-36). */
   author: string;
   /** Why a synced event cannot be changed from CaFam, if it cannot (spec 009 RF-8). */
-  readOnly?: "google" | "reconnect" | null;
+  readOnly?: ReadOnlyReason | null;
+  /** The provider of a synced calendar; Google when absent (spec 018). */
+  provider?: ProviderName;
   /** The rule of an occurrence and whether it was changed alone (spec 013 RF-10, RF-16). */
   repeat?: { summary: string; changed: boolean; limitReached: boolean } | null;
 }
-
-const READ_ONLY_TEXT = {
-  google:
-    "La cuenta de Google solo puede ver este calendario, así que este evento solo se puede cambiar en Google.",
-  reconnect:
-    "Este evento viene de Google. Para cambiarlo desde CaFam, el propietario tiene que volver a conectar la cuenta.",
-};
 
 function Row({
   label,
@@ -113,7 +110,9 @@ export function EventDetail({
       </dl>
       {media}
       {event.readOnly ? (
-        <p className="text-sm text-muted">{READ_ONLY_TEXT[event.readOnly]}</p>
+        <p className="text-sm text-muted">
+          {readOnlyEventText(event.readOnly, event.provider ?? "google")}
+        </p>
       ) : null}
       {canEdit ? (
         <div className="flex flex-wrap gap-3">

@@ -23,9 +23,14 @@ import {
 import type { ConfirmState } from "@/lib/forms/form-state";
 import { parseEventId } from "@/lib/recurrence/occurrence-id";
 import type { SeriesScope } from "@/lib/recurrence/series-write";
-import { canWriteEvents, readOnlyReason } from "@/lib/sync/read-only";
+import { isGoneDone, providerOrGoogle } from "@/lib/sync/provider-labels";
+import {
+  canWriteEvents,
+  readOnlyPasteText,
+  readOnlyReason,
+} from "@/lib/sync/read-only";
 import type { EventRowInput } from "@/lib/sync/write-event";
-import { WRITE_ERRORS } from "@/lib/sync/write-errors";
+import { goneText, writeErrorText } from "@/lib/sync/write-errors";
 import {
   deleteOccurrences,
   deleteSingle,
@@ -116,8 +121,8 @@ export async function deleteForUndo(
         )
       : await deleteSingle(supabase, id, "modal");
     if (failed?.loss) return { ok: false, error: "", loss: failed.loss };
-    if (failed?.done === "gone") {
-      return { ok: false, gone: true, error: WRITE_ERRORS.gone };
+    if (isGoneDone(failed?.done)) {
+      return { ok: false, gone: failed.done, error: goneText(failed.done) };
     }
     if (failed) {
       return {
@@ -206,7 +211,10 @@ export async function undoAction(token: UndoToken): Promise<UndoResult> {
         },
       });
       if (created.status === "failed") {
-        return { ok: false, error: WRITE_ERRORS[created.failure] };
+        return {
+          ok: false,
+          error: writeErrorText(created.failure, created.provider),
+        };
       }
       if (created.status !== "done") return restoreFailure(null);
       const { error } = await supabase.rpc("restore_event", {
@@ -237,13 +245,6 @@ const pasteTargetSchema = z.object({
     .optional(),
 });
 
-const PASTE_READ_ONLY = {
-  google:
-    "La cuenta de Google solo puede ver este calendario, así que no se puede pegar en él.",
-  reconnect:
-    "Para pegar en este calendario, el propietario tiene que volver a conectar la cuenta de Google.",
-};
-
 /**
  * A copy of the event on the day or slot chosen, with its duration and
  * calendar but no images nor comments (RF-58 to RF-61). An occurrence is
@@ -264,7 +265,13 @@ export async function pasteEvent(
       const reason = calendar ? readOnlyReason(calendar.synced) : null;
       return {
         ok: false,
-        error: reason ? PASTE_READ_ONLY[reason] : CALENDAR_MESSAGES.forbidden,
+        error:
+          reason && calendar?.synced
+            ? readOnlyPasteText(
+                reason,
+                providerOrGoogle(calendar.synced.provider),
+              )
+            : CALENDAR_MESSAGES.forbidden,
       };
     }
     const timeZone = await getProfileTimeZone(supabase, userId);
@@ -281,7 +288,10 @@ export async function pasteEvent(
 
     const synced = await syncedWrite(supabase, { op: "create", row });
     if (synced.status === "failed") {
-      return { ok: false, error: WRITE_ERRORS[synced.failure] };
+      return {
+        ok: false,
+        error: writeErrorText(synced.failure, synced.provider),
+      };
     }
     if (synced.status === "dbError") return errorOf(synced.error);
     let id: string;
@@ -319,7 +329,7 @@ export async function deleteFromDetail(
     confirmLoss: formData.get("confirmLoss") === "1",
   });
   if (result.ok) return { done: "deleted", undo: result.undo };
-  if (result.gone) return { done: "gone" };
+  if (result.gone) return { done: result.gone };
   if (result.loss) return { loss: result.loss };
   return { formError: result.error };
 }

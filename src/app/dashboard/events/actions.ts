@@ -26,7 +26,8 @@ import {
   SERIES_SCOPES,
   type SeriesScope,
 } from "@/lib/recurrence/series-write";
-import { WRITE_ERRORS } from "@/lib/sync/write-errors";
+import { isGoneDone, type GoneDone } from "@/lib/sync/provider-labels";
+import { goneText, writeErrorText } from "@/lib/sync/write-errors";
 import {
   changeOccurrence,
   deleteOccurrences,
@@ -66,11 +67,15 @@ function inWindow(formData: FormData): boolean {
   return formData.get("mode") === "modal";
 }
 
-/** Deleted in Google meanwhile: CaFam already removed it (spec 009 RF-25). */
-function gone(formData: FormData, values: EventFormValues): EventFormState {
+/** Deleted in the provider meanwhile: CaFam already removed it (spec 009 RF-25, spec 018 RF-48). */
+function gone(
+  formData: FormData,
+  values: EventFormValues,
+  done: GoneDone,
+): EventFormState {
   refresh();
-  if (inWindow(formData)) return { done: "gone", values };
-  return { formError: WRITE_ERRORS.gone, values };
+  if (inWindow(formData)) return { done, values };
+  return { formError: goneText(done), values };
 }
 
 function parseForm(values: EventFormValues, timeZone: string) {
@@ -216,7 +221,10 @@ export async function createEvent(
         row: toRow(parsed.data),
       });
       if (synced.status === "failed") {
-        return { formError: WRITE_ERRORS[synced.failure], values };
+        return {
+          formError: writeErrorText(synced.failure, synced.provider),
+          values,
+        };
       }
       if (synced.status === "dbError") return failure(synced.error, values);
       if (synced.status === "done") {
@@ -255,7 +263,7 @@ export async function updateEvent(
   }
   const { supabase, userId } = await requireActionUser();
 
-  let saved: Saved | "gone";
+  let saved: Saved | GoneDone;
   try {
     const timeZone = await getProfileTimeZone(supabase, userId);
     const parsed = parseForm(values, timeZone);
@@ -293,7 +301,7 @@ export async function updateEvent(
     return failure(error, values);
   }
 
-  if (saved === "gone") return gone(formData, values);
+  if (isGoneDone(saved)) return gone(formData, values, saved);
   if (!("id" in saved)) return saved;
   refresh();
   if (inWindow(formData)) return { done: "updated", values };

@@ -101,7 +101,11 @@ async function ConnectionDetail({
               message={syncErrorText("revoked", connection.provider)}
             />
             <LinkButton
-              href={`/dashboard/connections/new?provider=${connection.provider}`}
+              href={
+                connection.provider === "icloud"
+                  ? `/dashboard/connections/new?provider=icloud&reconnect=${id}`
+                  : "/dashboard/connections/new?provider=google"
+              }
               className="self-start"
             >
               Volver a conectar

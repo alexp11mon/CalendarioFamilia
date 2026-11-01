@@ -1,6 +1,8 @@
 // Reads for the account screens (spec 006). Everything goes through the user's
 // session: Auth for the addresses, RLS for the rows.
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { providerOrGoogle } from "@/lib/sync/provider-labels";
+import type { ProviderName } from "@/lib/sync/providers/types";
 import type { Database } from "@/types/database";
 
 // The server client and the test clients share this type.
@@ -45,6 +47,9 @@ export interface AccountNotice {
   personName: string;
   calendarName: string;
   createdAt: string;
+  /** sync_revoked only: the account to reconnect (spec 018 RF-62). */
+  provider?: ProviderName;
+  connectionId?: string;
 }
 
 const NOTICE_KINDS = new Set<string>([
@@ -63,15 +68,37 @@ export async function getNotices(supabase: Client): Promise<AccountNotice[]> {
     .is("read_at", null)
     .order("created_at", { ascending: false });
   if (error) throw error;
-  return (data ?? [])
-    .filter((row) => NOTICE_KINDS.has(row.kind))
-    .map((row) => ({
+  const rows = (data ?? []).filter((row) => NOTICE_KINDS.has(row.kind));
+
+  // The notice keeps only the account's address: find the own connection
+  // that needs reconnecting, Google or iCloud (spec 018 RF-62).
+  const revoked = rows.some((row) => row.kind === "sync_revoked");
+  const { data: connections } = revoked
+    ? await supabase
+        .from("calendar_connections")
+        .select("id, provider, account_email, status")
+    : { data: [] };
+  const accountOf = (email: string) =>
+    (connections ?? [])
+      .filter((c) => c.account_email === email)
+      .sort((a) => (a.status === "needs_reauth" ? -1 : 1))[0];
+
+  return rows.map((row) => {
+    const notice: AccountNotice = {
       id: row.id,
       kind: row.kind as NoticeKind,
       personName: row.person_name,
       calendarName: row.calendar_name,
       createdAt: row.created_at,
-    }));
+    };
+    const account =
+      row.kind === "sync_revoked" ? accountOf(row.calendar_name) : undefined;
+    if (account) {
+      notice.provider = providerOrGoogle(account.provider);
+      notice.connectionId = account.id;
+    }
+    return notice;
+  });
 }
 
 export interface OrphanCalendar {

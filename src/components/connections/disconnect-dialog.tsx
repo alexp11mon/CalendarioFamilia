@@ -43,6 +43,13 @@ export function DisconnectDialog({
       confirmLabel="Sí, desconectar"
       action={action}
     >
+      {provider === "icloud" ? (
+        <p>
+          En iCloud no se borra nada. CaFam no puede retirar su acceso por ti:
+          cuando termines, revoca la contraseña específica de app en
+          account.apple.com.
+        </p>
+      ) : null}
       {shared.length > 0 ? (
         <div className="flex flex-col gap-1">
           <p>Están compartidos:</p>

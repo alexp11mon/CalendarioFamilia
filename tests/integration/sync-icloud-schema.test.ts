@@ -6,6 +6,7 @@ import {
   deleteTestUser,
   type TestUser,
 } from "./helpers";
+import { getNotices } from "@/lib/account/queries";
 
 // Spec 018, T2: iCloud is a provider like Google (plan "Modelo de datos", D3;
 // RF-5, RF-9, RF-10, RF-11, RF-18).
@@ -188,5 +189,45 @@ describe("limits across providers (RF-11, RF-18)", () => {
   it("still rejects unknown providers", async () => {
     const { error } = await connect(ana, "otro" as "google", "x", "rt");
     expect(error).not.toBeNull();
+  });
+});
+
+// Spec 018, T13: the notice of a refused password leads to that account (RF-62).
+describe("sync_revoked notices (RF-61, RF-62)", () => {
+  it("come back with the provider and the connection to reconnect", async () => {
+    const cy = await createTestUser({ display_name: "Cy" });
+    try {
+      // The same address as Google account and as Apple ID, a common case.
+      await connect(cy, "google", "cy-google", "rt");
+      const { data } = await connect(
+        cy,
+        "icloud",
+        "cy@icloud.test",
+        credential("abcd-efgh-ijkl-mnop"),
+      );
+      const id = (data as { id: string }).id;
+      await admin
+        .from("calendar_connections")
+        .update({ account_email: "cy@icloud.test" })
+        .eq("account_subject", "cy-google");
+      await admin
+        .from("calendar_connections")
+        .update({ status: "needs_reauth" })
+        .eq("id", id);
+      await admin.from("account_notices").insert({
+        user_id: cy.id,
+        kind: "sync_revoked",
+        calendar_name: "cy@icloud.test",
+      });
+
+      const [notice] = await getNotices(cy.client);
+      expect(notice).toMatchObject({
+        kind: "sync_revoked",
+        provider: "icloud",
+        connectionId: id,
+      });
+    } finally {
+      await deleteTestUser(cy.id);
+    }
   });
 });

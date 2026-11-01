@@ -114,10 +114,7 @@ describe("UploadForm (RF-43)", () => {
       />,
     );
 
-    await user.selectOptions(
-      screen.getByLabelText("Cuenta de Google"),
-      "casa@gmail.com",
-    );
+    await user.selectOptions(screen.getByLabelText("Cuenta"), "c2");
     await user.click(screen.getByRole("button", { name: "Subir a Google" }));
 
     const data = (action.mock.calls[0] as unknown[])[1] as FormData;
@@ -153,7 +150,7 @@ describe("Subir a Google in Mis calendarios (RF-38)", () => {
 
     const [mine, other] = screen.getAllByRole("listitem");
     expect(
-      within(mine).getByRole("link", { name: "Subir Mío a Google" }),
+      within(mine).getByRole("link", { name: "Subir Mío a Google o iCloud" }),
     ).toHaveAttribute("href", "/dashboard/calendars/a/upload");
     expect(
       within(other).queryByRole("link", { name: /a Google/ }),

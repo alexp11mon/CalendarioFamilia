@@ -209,7 +209,7 @@ describe("createEvent with Repetir", () => {
     h.synced = { calendar_id: CALENDAR_ID };
     const state = await createEvent(EMPTY, form({ repeat: "daily" }));
     expect(state.fieldErrors?.repeat).toBe(
-      "Los calendarios de Google no admiten repeticiones en CaFam.",
+      "Los calendarios traídos de Google o iCloud no admiten repeticiones en CaFam.",
     );
     expect(h.writeEvent).not.toHaveBeenCalled();
     expect(h.inserted).toEqual([]);

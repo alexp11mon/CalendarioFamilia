@@ -123,10 +123,10 @@ export function CalendarList({
             {calendar.canUpload ? (
               <Link
                 href={`/dashboard/calendars/${calendar.id}/upload`}
-                aria-label={`Subir ${calendar.name} a Google`}
+                aria-label={`Subir ${calendar.name} a Google o iCloud`}
                 className={ACTION_LINK}
               >
-                Subir a Google
+                Subir a Google o iCloud
               </Link>
             ) : null}
             {calendar.role !== "viewer" ? (

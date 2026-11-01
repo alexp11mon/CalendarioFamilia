@@ -1,18 +1,20 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { FormAlert } from "@/components/ui/form-alert";
 import { Select } from "@/components/ui/select";
 import type { FormAction, FormState } from "@/lib/forms/form-state";
+import { providerName } from "@/lib/sync/provider-labels";
+import type { ProviderName } from "@/lib/sync/providers/types";
 
 type UploadState = FormState<"connectionId">;
 
 const count = (n: number) => `${n} ${n === 1 ? "evento" : "eventos"}`;
 
 /**
- * Chooses the Google account and says what will be copied before uploading
- * (spec 009 RF-34, RF-35, RF-42, RF-43).
+ * Chooses the account and says what will be copied before uploading
+ * (spec 009 RF-34, RF-35, RF-42, RF-43; spec 018 RF-57: Google or iCloud).
  */
 export function UploadForm({
   accounts,
@@ -22,7 +24,7 @@ export function UploadForm({
   occurrences = 0,
   action,
 }: {
-  accounts: { id: string; email: string }[];
+  accounts: { id: string; email: string; provider?: ProviderName }[];
   toGoogle: number;
   onlyCafam: number;
   /** Series and the occurrences they go up as (spec 013 RF-30). */
@@ -33,25 +35,31 @@ export function UploadForm({
   const [state, formAction, pending] = useActionState(action, {
     values: { connectionId: accounts[0]?.id ?? "" },
   });
+  // Controlled only to name the chosen account's provider in the texts.
+  const [chosen, setChosen] = useState(state.values.connectionId);
+  const provider = providerName(
+    accounts.find((a) => a.id === chosen)?.provider ?? "google",
+  );
 
   return (
     <form action={formAction} noValidate className="flex flex-col gap-4">
       <FormAlert message={state.formError} />
       <Select
-        label="Cuenta de Google"
+        label="Cuenta"
         name="connectionId"
-        defaultValue={state.values.connectionId}
+        value={chosen}
+        onChange={(event) => setChosen(event.target.value)}
         error={state.fieldErrors?.connectionId}
       >
         {accounts.map((account) => (
           <option key={account.id} value={account.id}>
-            {account.email}
+            {providerName(account.provider ?? "google")}: {account.email}
           </option>
         ))}
       </Select>
       <div className="flex flex-col gap-1 text-ink">
         <p className="tabular-nums">
-          Se copiarán a Google <strong>{count(toGoogle)}</strong>.
+          Se copiarán a {provider} <strong>{count(toGoogle)}</strong>.
         </p>
         {onlyCafam > 0 ? (
           <p className="tabular-nums">
@@ -78,7 +86,7 @@ export function UploadForm({
       </div>
       <div>
         <Button type="submit" disabled={pending}>
-          {pending ? "Subiendo…" : "Subir a Google"}
+          {pending ? "Subiendo…" : `Subir a ${provider}`}
         </Button>
       </div>
     </form>

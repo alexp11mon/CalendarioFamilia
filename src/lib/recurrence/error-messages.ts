@@ -3,7 +3,8 @@
 export const RECURRENCE_MESSAGES = {
   invalid: "Elige una repetición válida.",
   empty: "Con este final la serie no tiene ninguna repetición.",
-  synced: "Los calendarios de Google no admiten repeticiones en CaFam.",
+  synced:
+    "Los calendarios traídos de Google o iCloud no admiten repeticiones en CaFam.",
   series: "Este calendario ya tiene 500 series. Borra alguna para crear otra.",
   exceptions:
     "Esta serie ya tiene 100 cambios sueltos. Usa «Este y los siguientes».",

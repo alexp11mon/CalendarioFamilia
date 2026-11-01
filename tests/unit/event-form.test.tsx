@@ -497,7 +497,7 @@ describe("EventForm: Repetir (spec 013 RF-1, RF-2, RF-29)", () => {
     expect(screen.getByLabelText("Repetir")).toBeDisabled();
     expect(
       screen.getByText(
-        "Los calendarios de Google no admiten repeticiones en CaFam.",
+        "Los calendarios traídos de Google o iCloud no admiten repeticiones en CaFam.",
       ),
     ).toBeInTheDocument();
   });

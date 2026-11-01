@@ -18,7 +18,9 @@ function noticeText(notice: AccountNotice): string {
     case "deleted_calendar":
       return `El calendario «${notice.calendarName}» se ha eliminado porque nadie decidió conservarlo.`;
     case "sync_revoked":
-      return `Google ha retirado el permiso de CaFam en la cuenta ${notice.calendarName}. Sus calendarios se conservan, pero no se actualizan.`;
+      return notice.provider === "icloud"
+        ? `iCloud ya no acepta la contraseña de la cuenta ${notice.calendarName}. Pasa al cambiar la contraseña del Apple ID o al revocar la contraseña específica de app. Sus calendarios se conservan, pero no se actualizan: vuelve a conectarla con una contraseña nueva.`
+        : `Google ha retirado el permiso de CaFam en la cuenta ${notice.calendarName}. Sus calendarios se conservan, pero no se actualizan.`;
     case "sync_failing":
       return `La actualización de «${notice.calendarName}» ha fallado 3 veces seguidas. Se seguirá intentando.`;
   }
@@ -49,7 +51,13 @@ function NoticeItem({
     dismissAction.bind(null, notice.id),
     {},
   );
-  const link = NOTICE_LINKS[notice.kind];
+  const link =
+    notice.kind === "sync_revoked" && notice.provider === "icloud"
+      ? {
+          href: `/dashboard/connections/new?provider=icloud${notice.connectionId ? `&reconnect=${notice.connectionId}` : ""}`,
+          label: "Volver a conectar",
+        }
+      : NOTICE_LINKS[notice.kind];
 
   return (
     <li className="flex flex-col gap-3 rounded-2xl bg-paper p-4 sm:flex-row sm:items-start sm:justify-between">

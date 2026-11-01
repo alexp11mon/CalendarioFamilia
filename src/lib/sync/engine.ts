@@ -1,7 +1,9 @@
 import { createClient } from "@supabase/supabase-js";
 import { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from "@/lib/supabase/env";
 import type { Database } from "@/types/database";
+import type { IcloudCredential } from "./icloud-credentials";
 import { openSession, revokeAccess } from "./providers";
+import { verifyIcloud } from "./providers/icloud";
 import type { ProviderCalendar } from "./providers/types";
 import {
   syncCalendars,
@@ -92,4 +94,11 @@ export async function revokeConnection(
   provider: string,
 ): Promise<void> {
   await revokeAccess(engineDeps(), provider, connectionId);
+}
+
+/** Checks an iCloud Apple ID and app-specific password before saving them (spec 018 RF-5 to RF-8). */
+export async function verifyIcloudCredential(
+  credential: IcloudCredential,
+): Promise<void> {
+  await verifyIcloud(credential);
 }

@@ -29,6 +29,9 @@ export function ConnectionList({
         <LinkButton href="/dashboard/connections/new?provider=google">
           Conectar Google
         </LinkButton>
+        <LinkButton href="/dashboard/connections/new?provider=icloud">
+          Conectar iCloud
+        </LinkButton>
       </div>
 
       {connections.length === 0 ? (
@@ -70,7 +73,7 @@ export function ConnectionList({
       )}
 
       <p className="text-muted">
-        ¿Solo quieres una copia de un calendario de iCloud u otro servicio?{" "}
+        ¿Solo quieres una copia de un calendario de otro servicio?{" "}
         <Link href="/dashboard/import" className={LINK}>
           Importar un .ics
         </Link>

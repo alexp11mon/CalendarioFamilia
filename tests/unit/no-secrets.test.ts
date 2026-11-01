@@ -89,6 +89,8 @@ describe("spec 007 secrets (T14)", () => {
       "app/api/oauth/[provider]/callback/route.ts",
       // Spec 018 T3: the token renewal moved from run-sync.ts to deps.ts.
       "lib/sync/deps.ts",
+      // Spec 018 D3: the iCloud credential goes to Vault in p_refresh_token.
+      "app/dashboard/connections/actions.ts",
       "types/database.ts",
     ];
     const mentions = FILES.filter(({ content }) =>

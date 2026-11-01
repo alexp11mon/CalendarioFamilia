@@ -48,6 +48,10 @@ describe("ConnectionList", () => {
     expect(
       screen.getByRole("link", { name: "Conectar Google" }),
     ).toHaveAttribute("href", "/dashboard/connections/new?provider=google");
+    // Spec 018 RF-1: iCloud next to Google.
+    expect(
+      screen.getByRole("link", { name: "Conectar iCloud" }),
+    ).toHaveAttribute("href", "/dashboard/connections/new?provider=icloud");
     expect(
       screen.getByRole("link", { name: /importar un \.ics/i }),
     ).toHaveAttribute("href", "/dashboard/import");

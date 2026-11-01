@@ -15,13 +15,21 @@ import {
 import {
   revokeConnection,
   syncConnection,
+  verifyIcloudCredential,
   writeEngineDeps,
   type ConnectionSync,
 } from "@/lib/sync/engine";
 import { createSyncedCalendar } from "@/lib/sync/write-calendar";
 import { writeErrorText } from "@/lib/sync/write-errors";
 import { nearestColor } from "@/lib/sync/nearest-color";
-import { connectionIdSchema, selectionSchema } from "@/lib/sync/schemas";
+import { ICLOUD_CONNECT_ERRORS } from "@/lib/sync/error-messages";
+import { serializeCredential } from "@/lib/sync/icloud-credentials";
+import { ProviderError } from "@/lib/sync/providers/types";
+import {
+  connectionIdSchema,
+  icloudConnectSchema,
+  selectionSchema,
+} from "@/lib/sync/schemas";
 import { summaryText, SYNC_ERRORS } from "@/lib/sync/summary";
 
 // Actions of /dashboard/connections/[id] (spec 007; plan D5; RF-10, RF-11,
@@ -267,4 +275,65 @@ export async function createGoogleCalendar(
 
   revalidatePath("/dashboard", "layout");
   redirect(`/dashboard/connections/${connectionId}`);
+}
+
+type IcloudField = "appleId" | "password";
+
+/**
+ * Connects an iCloud account: checks the Apple ID and app-specific password
+ * with iCloud, then saves them in Vault like Google's token (spec 018 plan D3;
+ * RF-5 to RF-12). The password never goes back to the browser (RF-12).
+ */
+export async function connectIcloud(
+  _prevState: FormState<IcloudField>,
+  formData: FormData,
+): Promise<FormState<IcloudField>> {
+  const values = { appleId: readString(formData, "appleId"), password: "" };
+  const parsed = icloudConnectSchema.safeParse({
+    appleId: values.appleId,
+    password: readString(formData, "password"),
+  });
+  if (!parsed.success) {
+    return {
+      fieldErrors: fieldErrorsFromZod<IcloudField>(parsed.error),
+      values,
+    };
+  }
+  const credential = {
+    username: parsed.data.appleId,
+    password: parsed.data.password,
+  };
+
+  try {
+    await verifyIcloudCredential(credential);
+  } catch (error) {
+    const refused = error instanceof ProviderError && error.kind === "revoked";
+    return {
+      formError: refused
+        ? ICLOUD_CONNECT_ERRORS.rejected
+        : ICLOUD_CONNECT_ERRORS.transient,
+      values,
+    };
+  }
+
+  const { supabase } = await requireActionUser();
+  // The same account again replaces the password and resumes it (RF-9).
+  const { data, error } = await supabase.rpc("connect_account", {
+    p_provider: "icloud",
+    p_subject: credential.username,
+    p_email: credential.username,
+    p_refresh_token: serializeCredential(credential),
+    p_can_write: true,
+  });
+  if (error) {
+    return {
+      formError:
+        error.code === "CF429"
+          ? ICLOUD_CONNECT_ERRORS.max
+          : AUTH_MESSAGES.connection,
+      values,
+    };
+  }
+  revalidatePath("/dashboard", "layout");
+  redirect(`/dashboard/connections/${(data as { id: string }).id}`);
 }

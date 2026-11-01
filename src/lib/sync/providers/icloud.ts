@@ -197,12 +197,23 @@ async function discoverHome(davFetch: typeof fetch): Promise<string> {
   return icloudUrl(hrefOf(firstProps(home)?.calendarHomeSet), principal);
 }
 
+/** One deadline for the whole check when connecting (plan D12, RF-8). */
+const VERIFY_DEADLINE_MS = 10_000;
+
 /** Checks the Apple ID and password with a real discovery (RF-5, RF-6, RF-8). */
 export async function verifyIcloud(
   credential: IcloudCredential,
   fetchFn: typeof fetch = fetch,
 ): Promise<void> {
-  await discoverHome(icloudFetch(credential, fetchFn));
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), VERIFY_DEADLINE_MS);
+  const withDeadline: typeof fetch = (input, init) =>
+    fetchFn(input, { ...init, signal: controller.signal });
+  try {
+    await discoverHome(icloudFetch(credential, withDeadline));
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 /** CalDAV time-range values: `20261001T000000Z`. */
